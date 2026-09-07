@@ -803,3 +803,19 @@ def test_cli_rejects_contradictory_and_out_of_range_flags(config_dir):
 
 def test_cli_cal_att_keep(config_dir):
     assert cm.main([str(config_dir), "--dummy", "--cal-att", "keep", "--no-cache-write"]) == 0
+
+
+def test_the_precondition_reaches_the_operator_before_they_start():
+    """`calibrate_mixers.py` prints its PRECONDITIONS block at RUNTIME - i.e.
+    after the operator has already started it. `scqo state --fields` carries the
+    same sentence in the command inventory, which is where they can read it
+    BEFORE. Pinned literally so the two cannot drift apart."""
+    from pathlib import Path
+
+    from scqo_qblox.backend.fieldmap import OPERATOR_COMMANDS
+
+    phrase = "no scqo session / HardwareAgent holding"
+    entry = next(c for c in OPERATOR_COMMANDS if c.name == "calibrate_mixers")
+    assert phrase in entry.caution
+    script = Path(__file__).resolve().parents[1] / "scripts" / "calibrate_mixers.py"
+    assert phrase in script.read_text(encoding="utf-8")

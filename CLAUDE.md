@@ -213,7 +213,9 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
 - **Mixer calibration** (`scripts/calibrate_mixers.py`, notebook wrapper alongside) is an
   OPERATIONS tool, not part of the scqo surface: it drives the RF modules' built-in AMC
   straight through `qblox_instruments`, so no session/HardwareAgent may hold the cluster
-  while it runs. It reads the config folder — connectivity graph for port -> (slot, output),
+  while it runs. It is listed — with that precondition, which the script itself only prints
+  at RUNTIME — in `fieldmap.OPERATOR_COMMANDS`, rendered by `scqo state --fields`: an
+  operator cannot find a non-scqo command through `scqo -h`, so that inventory is the door. It reads the config folder — connectivity graph for port -> (slot, output),
   `modulation_frequencies` for the LO, `dut_config` clocks for `NCO = clock_freq - lo_freq`.
   **`sideband_cal()` fails silently and non-deterministically.** It returns having changed
   nothing while the firmware reports success, on roughly half to three-quarters of calls
@@ -336,7 +338,10 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
   LIST, that shape is complex-channel). The 4-stage bank is hard hardware: overflow taps
   warn LOUDLY (kept = most significant by |A|), and `--extend` merges + re-partitions
   rather than appending. Saved via `QbloxDeviceModel.save()` (both config files);
-  compiled + pushed on the next run that plays flux — only QCM compilers apply it.
+  compiled + pushed on the next run that plays flux — only QCM compilers apply it. Reached
+  two ways: the cryoscopes print it at writeback (`distortion_apply_command`, run-addressed
+  and fully resolved), and `scqo state --fields` lists it as a `<placeholder>` template —
+  two artifacts on purpose, pinned to the same module by `test_scqo_glue.py`.
 - **Probes that acquire inside `probe()`** (`probe_self_acquires = "<why>"`, spelled by
   `backend.SELF_ACQUIRING_ATTR`, same default-ALLOW polarity as scqo-qm's): the two
   broadband sweeps, `qubit_drag_equator` and `qubit_tomography`. They step an LO or the

@@ -129,6 +129,17 @@ def test_field_catalog_matches_implementation():
         assert v.kind in VENDOR_ONLY_KINDS, name
         if v.kind == "unique":
             assert "no qm counterpart" in v.doc.lower(), name
+        # the operational half. `coupled` is checked the way binding.coupled is:
+        # a typo or a half-deleted pairing must not survive as a dangling name.
+        assert set(v.coupled) <= (set(fieldmap.VENDOR_ONLY) | ALL_STATIC_FIELDS) - {name}, name
+        # a tuple typo here would render as a Python repr on a lab console
+        assert isinstance(v.edit, str) and isinstance(v.counterpart, str), name
+        assert all(s.isascii() for s in (v.doc, v.edit, v.counterpart)), name
+    # DELIBERATELY NOT asserted, and it must stay that way: "every non-unique
+    # entry declares a counterpart" and "every realizer declares an edit". Some
+    # entries have no counterpart prose to extract and inventing one would be a
+    # new claim; QM's twin file has realizers whose governed write is not
+    # reachable at all. Both rules would fail on day one.
 
     tree = ast.parse(Path(fieldmap.__file__).read_text(encoding="utf-8"))
     imported = {
@@ -147,7 +158,53 @@ def test_field_catalog_matches_implementation():
     assert QbloxBackend.field_bindings(None) == fieldmap.FIELD_BINDINGS
     assert QbloxBackend.unrealized(None) == fieldmap.UNREALIZED
     assert QbloxBackend.vendor_only(None) == fieldmap.VENDOR_ONLY
+    assert QbloxBackend.operator_commands(None) == fieldmap.OPERATOR_COMMANDS
     assert set(_CHANNEL_VIEWS) == SERVED_KINDS
+
+
+def test_operator_command_inventory():
+    """The vendor CLIs this driver ships. They are not scqo subcommands, so
+    `scqo -h` cannot show them and this inventory (rendered by
+    `scqo state --fields`) is where an operator finds them instead of
+    memorizing them."""
+    import importlib.util
+
+    from scqo_qblox.backend import fieldmap
+
+    commands = fieldmap.OPERATOR_COMMANDS
+    assert commands, "the driver ships operator CLIs; declaring none hides them"
+    names = [c.name for c in commands]
+    assert len(set(names)) == len(names), names
+    for c in commands:
+        assert c.name and c.command and c.doc, c.name
+        assert all(s.isascii() for s in (c.name, c.command, c.doc, c.options,
+                                         c.caution)), c.name
+        # anti-rot: a renamed or moved operator module fails HERE, in CI, and
+        # not six weeks later in the lab with a command that no longer exists
+        for word in c.command.split():
+            if word.startswith("scqo_qblox."):
+                assert importlib.util.find_spec(word), f"{c.name}: {word}"
+    # calibrate_mixers is PATH-invoked, not `python -m`, so find_spec cannot
+    # reach it - check the script itself is where the inventory says it is
+    script = next(c for c in commands if c.name == "calibrate_mixers")
+    assert "scripts/calibrate_mixers.py" in script.command
+    assert (REPO / "scripts" / "calibrate_mixers.py").is_file()
+
+
+def test_distortion_hint_and_inventory_agree():
+    """The cryoscope writeback hint builds a RESOLVED command (this target, this
+    run) while the inventory carries a <placeholder> template, so they are two
+    artifacts on purpose - but they must name the same module. Deriving one from
+    the other would buy a placeholder-substitution contract nothing else needs;
+    this assert buys the anti-drift property instead."""
+    from scqo_qblox.backend import fieldmap
+    from scqo_qblox.backend.qblox_backend import QbloxBackend
+
+    entry = next(c for c in fieldmap.OPERATOR_COMMANDS
+                 if c.name == "apply_distortion")
+    prefix = entry.command.split(" --")[0]
+    # distortion_apply_command uses no self, so the unbound call needs no cluster
+    assert QbloxBackend.distortion_apply_command(None, "q1").startswith(prefix)
 
 
 def test_backend_entry_point_resolves(tmp_path, roster):

@@ -29,9 +29,14 @@ from scqo.backend import Backend
 from scqo.catalog import derived_op
 from scqo.device import ComponentInfo, DeviceModel, EntityView, make_view_base
 from scqo.entities import Channel
-from scqo.fieldmap import Unrealized, VendorBinding, VendorOnly
+from scqo.fieldmap import OperatorCommand, Unrealized, VendorBinding, VendorOnly
 
-from scqo_qblox.backend.fieldmap import FIELD_BINDINGS, UNREALIZED, VENDOR_ONLY
+from scqo_qblox.backend.fieldmap import (
+    FIELD_BINDINGS,
+    OPERATOR_COMMANDS,
+    UNREALIZED,
+    VENDOR_ONLY,
+)
 
 #: A probe whose ``probe()`` EXECUTES on the cluster and returns a ready Dataset
 #: (instead of a native ``Schedule``) sets this class attribute to a one-line
@@ -1108,6 +1113,16 @@ class QbloxBackend(Backend):
     def vendor_only(self) -> dict[str, VendorOnly]:
         """Qblox-unique calibration knobs, vendor-owned (see fieldmap)."""
         return dict(VENDOR_ONLY)
+
+    def operator_commands(self) -> tuple[OperatorCommand, ...]:
+        """This driver's vendor operator CLIs (see fieldmap) — the other half of
+        "what can I reach on THIS instrument that is not a scqo command".
+
+        The tuple is returned as-is, unlike ``vendor_only``'s defensive
+        ``dict()``: a tuple of frozen dataclasses is already immutable, and
+        keeping the same object keeps the tests' unbound equality check exact.
+        """
+        return OPERATOR_COMMANDS
 
     def _default_view(self, target: str, kind: str) -> EntityView | None:
         """The target's DEFAULT channel view of one kind, or None when the roster

@@ -24,7 +24,7 @@ Rendered by ``scqo state --fields``; strings reach lab consoles, keep them ASCII
 
 from __future__ import annotations
 
-from scqo.fieldmap import Unrealized, VendorBinding, VendorOnly
+from scqo.fieldmap import OperatorCommand, Unrealized, VendorBinding, VendorOnly
 
 FIELD_BINDINGS: dict[str, dict[str, VendorBinding]] = {
     "drive": {
@@ -225,66 +225,73 @@ UNREALIZED: dict[str, dict[str, Unrealized]] = {
 VENDOR_ONLY: dict[str, VendorOnly] = {
     "readout_pulse_duration": VendorOnly(
         path="element.measure.pulse_duration", unit="s", kind="realizer",
-        doc="readout pulse length - realizes the TRACKED readout_duration_s "
-            "(a direct edit silently de-calibrates it; the governed write is "
-            "scqo set QUBIT.readout_duration_s=...). QM counterpart: "
-            "readout.length (ns)"),
+        doc="readout pulse length - realizes the TRACKED readout_duration_s",
+        edit="scqo set QUBIT.readout_duration_s=... - a direct edit silently "
+             "de-calibrates it",
+        counterpart="readout.length (ns)"),
     "readout_integration_time": VendorOnly(
         path="element.measure.integration_time", unit="s", kind="realizer",
         doc="acquisition integration window - realizes the TRACKED "
-            "readout_integration_s (governed write: scqo set "
-            "QUBIT.readout_integration_s=...; contract window <= pulse for QM "
-            "portability). QM counterpart: the integration-weights support"),
+            "readout_integration_s",
+        edit="scqo set QUBIT.readout_integration_s=... (contract: window <= "
+             "pulse, for QM portability)",
+        counterpart="the integration-weights support"),
     "readout_acq_delay": VendorOnly(
         path="element.measure.acq_delay", unit="s", kind="vendor",
         doc="delay from readout pulse start to acquisition start - aligns the "
             "instrument's receive path with its own transmit path (cable+"
             "electronics latency). The TOF measurement's product is written "
-            "HERE, in SECONDS, offline - never a neutral field. QM counterpart: "
-            "resonator.time_of_flight (ns)"),
+            "HERE, in SECONDS, offline - never a neutral field",
+        counterpart="resonator.time_of_flight (ns)"),
     "readout_lo_freq": VendorOnly(
         path='hardware_options.modulation_frequencies["<ro-port>-<qubit>.ro"].lo_freq',
         unit="Hz", kind="vendor",
         doc="readout LO - PORT-level wiring shared by every element on that "
             "output; many LO/IF splits give the SAME RF, so SCQO owns only the "
-            "RF (readout_freq_hz) and never moves the LO in a chain solve. Move "
-            "it so IF = readout_freq_hz - lo_freq stays in the sequencer NCO "
-            "range. Edit hw_config.json while NO session is live (a session's "
-            "save() rewrites the file from memory) and restart kernels after. "
-            "QM counterpart: opx_output.upconverter_frequency"),
+            "RF (readout_freq_hz) and never moves the LO in a chain solve",
+        edit="hw_config.json hardware_options.modulation_frequencies, with NO "
+             "session live (a session's save() rewrites the file from memory "
+             "and would silently revert you) - restart notebook kernels after. "
+             "Keep IF = readout_freq_hz - lo_freq in the sequencer NCO range",
+        counterpart="opx_output.upconverter_frequency"),
     "drive_lo_freq": VendorOnly(
         path='hardware_options.modulation_frequencies["<mw-port>-<qubit>.01"].lo_freq',
         unit="Hz", kind="vendor",
-        doc="drive LO - PORT-level, shared; keep IF = f01 - lo_freq in NCO range. "
-            "Same no-live-session edit rule as readout_lo_freq"),
+        doc="drive LO - PORT-level, shared by every element on that output",
+        edit="hw_config.json hardware_options.modulation_frequencies, with NO "
+             "session live (a session's save() rewrites the file from memory "
+             "and would silently revert you) - restart notebook kernels after. "
+             "Keep IF = f01 - lo_freq in NCO range"),
     "output_att": VendorOnly(
         path='hardware_options.output_att["<ro-port>-<qubit>.ro"]',
         unit="dB", kind="realizer",
         doc="the coarse readout power knob (EVEN integers 0-60) - it REALIZES "
-            "the tracked readout_power_dbm (binding above). Change power with "
-            "`scqo set QUBIT.readout_power_dbm=...` (solves the chain, keeps "
-            "readout_amp coupled, recorded); a direct edit silently "
-            "de-calibrates the absolute power, and any later readout_power_dbm "
-            "write re-solves and overwrites a forced value. Same "
-            "no-live-session edit rule as the LOs"),
+            "the tracked readout_power_dbm (binding above)",
+        edit="scqo set QUBIT.readout_power_dbm=... (solves the chain, keeps "
+             "readout_amp coupled, recorded); a direct edit silently "
+             "de-calibrates the absolute power. To FORCE a value, hand-edit "
+             "hw_config.json with no session live - but any later "
+             "readout_power_dbm write re-solves and overwrites it"),
     "drive_output_att": VendorOnly(
         path='hardware_options.output_att["<mw-port>-<qubit>.01"]',
         unit="dB", kind="realizer",
         doc="the coarse DRIVE power knob (EVEN integers 0-60, PORT-level - "
             "shared by every xy pulse) - it REALIZES the tracked "
-            "drive_power_dbm (binding above). Change power with "
-            "`scqo set QUBIT.drive_power_dbm=...` (solves the chain, keeps "
-            "drive_amp coupled, recorded); a direct edit silently re-scales "
-            "what every stored pi_amp AND the absolute drive power mean. "
-            "QM counterpart: xy opx_output full_scale_power_dbm"),
+            "drive_power_dbm (binding above)",
+        edit="scqo set QUBIT.drive_power_dbm=... (solves the chain, keeps "
+             "drive_amp coupled, recorded); a direct edit silently re-scales "
+             "what every stored pi_amp AND the absolute drive power mean. A "
+             "forced value goes in hw_config.json with no session live, same "
+             "rule as its readout twin in the same hardware_options block",
+        counterpart="xy opx_output full_scale_power_dbm"),
     "x180_duration": VendorOnly(
         path="element.rxy.duration", unit="s", kind="realizer",
         doc="pi/x180 pulse length - it REALIZES the tracked pi_duration_s "
             "(promoted to a neutral drive knob in the greenfield catalog; "
-            "binding above). The governed write is scqo set "
-            "QUBIT.pi_duration_s=...; a direct edit silently de-calibrates the "
-            "stored pi_amp with it. QM counterpart: "
-            "xy.operations['x180'].length (ns)"),
+            "binding above)",
+        edit="scqo set QUBIT.pi_duration_s=... - a direct edit silently "
+             "de-calibrates the stored pi_amp with it",
+        counterpart="xy.operations['x180'].length (ns)"),
     # NOTE: drag_beta is a neutral DRIVE knob (QM-realized). It is Unrealized on
     # Qblox for now (see UNREALIZED above) - element.rxy.beta is the vendor knob
     # that WOULD realize it; the binding lands when a Qblox DRAG experiment is
@@ -298,11 +305,59 @@ VENDOR_ONLY: dict[str, VendorOnly] = {
         path='hardware_options.input_att["<ro-port>-<qubit>.ro"]',
         unit="dB", kind="vendor",
         doc="acquisition input attenuation (chipA: 10 dB; input_gain gain_I/"
-            "gain_Q sit beside it) - edits silently invalidate every "
-            "discrimination value (acq_threshold, acq_rotation) and all "
-            "fidelity comparisons. QM counterpart: mw_input gain_db"),
+            "gain_Q sit beside it)",
+        coupled=("readout_threshold", "readout_rotation_rad"),
+        edit="an edit silently invalidates every discrimination value and all "
+             "fidelity comparisons - re-run single_shot_readout after it",
+        counterpart="mw_input gain_db"),
     "reference_magnitude": VendorOnly(
         path="element.measure.reference_magnitude", unit="dBm/V/A", kind="unique",
         doc="hardware-referenced amplitude scaling of the measure pulse - no QM "
             "counterpart: an experiment depending on it runs ONLY on Qblox"),
 }
+
+#: The vendor OPERATOR CLIs this driver ships. They are not scqo subcommands
+#: (scqo run <name> is the single entry point, and a Qblox-specific verb could
+#: only be refused on QM), so `scqo -h` cannot list them - `scqo state --fields`
+#: renders this inventory instead, which is the only place an operator discovers
+#: them rather than memorizing them. Declared HERE and not in qblox_backend.py
+#: because it is pure declarative vendor metadata of the same class as
+#: VENDOR_ONLY, and this module's import guard is what proves it stays
+#: vendor-free. Every string below compresses the target module's own docstring.
+OPERATOR_COMMANDS: tuple[OperatorCommand, ...] = (
+    OperatorCommand(
+        name="apply_distortion",
+        command="python -m scqo_qblox.backend.apply_distortion --target <target> "
+                "[--run <run_id>]",
+        doc="Write accepted cryoscope taps (distortion_amp / distortion_tau_s "
+            "are FACTS - accepting them records the measurement and pushes "
+            "NOTHING) into ONE QbloxHardwareDistortionCorrection under "
+            "hardware_options.distortion_corrections, saved to both config "
+            "files and compiled + pushed on the next run that plays flux. Run "
+            "it after a cryoscope run's facts are accepted; it is the same "
+            "command the cryoscope writeback hint prints for you.",
+        options="--run RUN_ID (taps from that run's fit - the iteration door)  "
+                "--extend (merge + re-partition the bank, not append)  "
+                "--clear (fresh-line reset)  --dry-run  --config PATH",
+        caution="The 4-stage bank is hard hardware: overflow taps are DROPPED "
+                "(the most significant by |A| are kept) and the run warns "
+                "loudly. Read that warning before trusting the filter."),
+    OperatorCommand(
+        name="calibrate_mixers",
+        command="python scripts/calibrate_mixers.py <config_dir>",
+        doc="Suppress LO leakage and the image sideband on the RF modules using "
+            "their built-in AMC - no spectrum analyzer, no cabling. An "
+            "OPERATIONS tool, not part of the scqo surface: it drives "
+            "qblox_instruments directly. Path-invoked from a scqo-qblox "
+            "checkout (not a module, not a console script); <config_dir> is the "
+            "setup's backend_config folder, which scqo doctor prints.",
+        options="--attempts N (default 12 - THE reliability lever: sideband_cal "
+                "returns having changed nothing on roughly half to "
+                "three-quarters of calls)  --slot N  --port-clock  "
+                "--force (ignore the cache)  --dry-run (plan only, no cluster)  "
+                "--diagnose  --dummy",
+        caution="no scqo session / HardwareAgent holding this cluster may be "
+                "live while it runs, and output switches go OFF during "
+                "calibration. It also ends its own process hard (os._exit) by "
+                "design, so never import it into a live session."),
+)
