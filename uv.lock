@@ -3123,7 +3123,7 @@ wheels = [
 
 [[package]]
 name = "scqat"
-version = "0.19.0"
+version = "0.25.0"
 source = { editable = "../scqat" }
 dependencies = [
     { name = "lmfit" },
@@ -3157,7 +3157,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "scqo"
-version = "3.0.0"
+version = "3.11.0"
 source = { editable = "../SCQO" }
 dependencies = [
     { name = "netcdf4" },
@@ -3180,6 +3180,7 @@ requires-dist = [
     { name = "openpyxl", marker = "extra == 'viewer'", specifier = ">=3.1" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "python-multipart", marker = "extra == 'viewer'", specifier = ">=0.0.9" },
+    { name = "python-pptx", marker = "extra == 'viewer'", specifier = ">=1.0" },
     { name = "scqat", editable = "../scqat" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0" },
     { name = "uvicorn", marker = "extra == 'viewer'", specifier = ">=0.29" },
@@ -3195,7 +3196,7 @@ dev = [
 
 [[package]]
 name = "scqo-qblox"
-version = "3.0.0"
+version = "3.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "lmfit" },

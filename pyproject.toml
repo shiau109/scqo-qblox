@@ -1,6 +1,6 @@
 [project]
 name = "scqo-qblox"
-version = "3.10.0"
+version = "3.11.0"
 description = "Qblox backend for the scqo instrument-agnostic experiment API"
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
