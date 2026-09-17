@@ -3123,7 +3123,7 @@ wheels = [
 
 [[package]]
 name = "scqat"
-version = "0.25.0"
+version = "0.26.0"
 source = { editable = "../scqat" }
 dependencies = [
     { name = "lmfit" },
@@ -3157,7 +3157,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "scqo"
-version = "3.11.0"
+version = "3.12.0"
 source = { editable = "../SCQO" }
 dependencies = [
     { name = "netcdf4" },
@@ -3196,7 +3196,7 @@ dev = [
 
 [[package]]
 name = "scqo-qblox"
-version = "3.11.0"
+version = "3.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "lmfit" },
