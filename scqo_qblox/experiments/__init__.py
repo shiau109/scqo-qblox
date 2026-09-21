@@ -13,6 +13,7 @@ from . import qubit_ramsey  # noqa: F401  (import side effect: @register)
 from . import qubit_ramsey_cryoscope  # noqa: F401  (import side effect: @register)
 from . import qubit_ramsey_phasor  # noqa: F401  (import side effect: @register)
 from . import qubit_relaxation  # noqa: F401  (import side effect: @register)
+from . import qubit_resonator_stark  # noqa: F401  (import side effect: @register)
 from . import qubit_spectroscopy  # noqa: F401  (import side effect: @register)
 from . import qubit_spectroscopy_cryoscope  # noqa: F401  (import side effect: @register)
 from . import qubit_spectroscopy_flux_pulse  # noqa: F401  (import side effect: @register)
@@ -49,6 +50,7 @@ __all__ = [
     "readout_power",
     "readout_frequency",
     "qubit_relaxation",
+    "qubit_resonator_stark",
     "qubit_echo",
     "qubit_thermal_population",
     "qubit_tomography",

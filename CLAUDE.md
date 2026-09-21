@@ -438,6 +438,7 @@ don't over-narrow.
 | `test_vendor_snapshot.py` | `vendor_config_snapshot`: deterministic, writes nothing, the EXECUTED config (not the disk copy), no nulls, parsed-equal to `save()`, degrades without an agent |
 | `test_att_limits.py` | the per-module attenuator ceiling: clamp-not-refuse, when the cluster is asked and when it must NOT be, the power-preserving re-solve, the sidecar |
 | `test_sequential_timing.py` | the BACKEND-PARITY half: `qubit_spectroscopy`'s drive ends at the readout tone's START (`readout_overlap=false`) or its END (`true`), at all three emission shapes — asserted on the COMPILED tree with accumulated absolute times |
+| `test_resonator_stark_timing.py` | the BACKEND-PARITY half for `qubit_resonator_stark`: the readout-port Stark tone rings up before the drive and ends with it, the standard `Measure` starts one depletion later, the tone plays the bare swept loop variable — on the COMPILED tree |
 | `test_qblox_reset.py` | `thermalization_time_s` as a neutral drive-channel knob |
 | `test_flux_limits.py` | the flux rail per MODULE, the volts→DAC-fraction conversion, the two frames, the RF-wiring refusal |
 | `test_readout_duration.py` | duration/window knobs on the readout view (pure stubs, no qblox_scheduler) |
