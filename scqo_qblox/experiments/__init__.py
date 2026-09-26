@@ -22,6 +22,7 @@ from . import qubit_thermal_population  # noqa: F401  (import side effect: @regi
 from . import qubit_tomography  # noqa: F401  (import side effect: @register)
 from . import readout_frequency  # noqa: F401  (import side effect: @register)
 from . import readout_power  # noqa: F401  (import side effect: @register)
+from . import readout_time_of_flight  # noqa: F401  (import side effect: @register)
 from . import broadband_qubit_spectroscopy  # noqa: F401  (import side effect: @register)
 from . import broadband_resonator_spectroscopy  # noqa: F401  (import side effect: @register)
 from . import resonator_spectroscopy  # noqa: F401  (import side effect: @register)
@@ -48,6 +49,7 @@ __all__ = [
     "resonator_spectroscopy_power_amp",
     "resonator_spectroscopy_power_chain",
     "readout_power",
+    "readout_time_of_flight",
     "readout_frequency",
     "qubit_relaxation",
     "qubit_resonator_stark",

@@ -1176,6 +1176,46 @@ class QbloxBackend(Backend):
                 continue
         return out
 
+    def readout_delay_context(self, target: str) -> dict:
+        """The instrument facts behind this target's readout delay.
+
+        The ``power_context`` shape — one duck-typed hook, one dict, vendor keys
+        inside — read by ``scqo.experiments.readout_time_of_flight`` to resolve
+        the acquisition window and by ``_tof_hint`` to name the field the answer
+        must be written into. ``field`` keys into :data:`fieldmap.VENDOR_ONLY`,
+        so the path, the unit and the edit instruction live there and are not
+        repeated here.
+
+        ``floor_ns`` is 0: unlike QM's ``time_of_flight``, ``acq_delay`` has no
+        hardware minimum — the scheduler will place an acquisition at the pulse
+        edge if asked. ``full_scale_v`` is omitted deliberately rather than
+        guessed: the QRM's input range depends on the module and its input
+        attenuation, and an ADC saturation flag reported against the wrong full
+        scale is worse than the NaN the estimator records for an unchecked one.
+
+        A target that serves no readout channel reports ``{}`` — there is no
+        acquisition path, so there is nothing to say.
+        """
+        try:
+            view = self._default_view(target, "readout")
+        except Exception:
+            view = None
+        if view is None:          # _default_view answers None, it does not raise
+            return {}
+        current = None
+        try:
+            raw = _read(view._element.measure, "acq_delay")
+            current = None if raw is None else float(raw) * 1e9
+        except Exception:
+            current = None
+        return {
+            "field": "readout_acq_delay",
+            "floor_ns": 0.0,
+            "grid_ns": 4.0,
+            "sample_ns": 1.0,
+            "current_ns": current,
+        }
+
     def power_context(self, qubits: list[str]) -> dict:
         """Raw readout + drive chain values per qubit (run-record provenance only).
 

@@ -308,6 +308,18 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
   probe emits from and the one the fit re-references cannot drift apart. NaN means uncalibrated and
   REFUSES; only the absolute probe's end-of-schedule park falls back to 0 V, because that park is a
   courtesy and not part of any measurement.
+- **`readout_time_of_flight` is the only probe using the `Trace` protocol**, and it
+  deliberately does NOT use `Measure`: `Measure` bundles the pulse with an integrated
+  acquisition placed at the element's own `acq_delay`, which is the number under test. The
+  pulse and the `Trace` sit on the same readout port-clock and the trace opens at the frame
+  the neutral experiment resolved. `ResetClockPhase` runs every repetition because
+  `BinMode.AVERAGE` averages the RAW trace — a free-running NCO phase averages the step away
+  and the fit reports `arrival_unresolved` on a healthy setup. `readout_delay_context`
+  declares NO `full_scale_v`: the QRM's input range depends on the module and its input
+  attenuation, and a saturation flag against a guessed range is worse than the NaN an
+  unchecked one records. **The shape the cluster returns for a `Trace` has never been seen
+  here** — the canonicalization assumes one complex array per `acq_channel` over the trace
+  samples, and that assumption is what the first real run tests (SCQO BACKLOG F22).
 - Placement rule (which store owns which value): `scqo state --rule` / SCQO TUTORIAL §10.
   A vendor copy of a neutral/physical value is legal only as a CACHE with a named
   refresh trigger — the SCQO stores are truth.
