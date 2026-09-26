@@ -170,7 +170,7 @@ def test_the_resonator_flux_probe_emits_FRACTIONS_not_volts(tmp_path):
     roster = parse_components(ROSTER_TOML)
     hw = json.loads(HW_2Q.read_text(encoding="utf-8"))
     backend = make_backend(tmp_path, roster, hw_config=hw)
-    params = C.Parameters(targets=["q1"], min_flux_v=-0.3, max_flux_v=0.3,
+    params = C.Parameters(targets=["q1"], start_flux_v=-0.3, end_flux_v=0.3,
                           num_flux_points=5, num_averages=2)
     experiment = make_experiment(C, backend, roster, params)
     experiment.sweep_axes = experiment.define_sweep()
@@ -198,7 +198,7 @@ def test_the_park_offset_is_converted_too(tmp_path):
     roster = parse_components(ROSTER_TOML)
     hw = json.loads(HW_2Q.read_text(encoding="utf-8"))
     backend = make_backend(tmp_path, roster, hw_config=hw)
-    params = C.Parameters(targets=["q1"], min_flux_v=-0.3, max_flux_v=0.3,
+    params = C.Parameters(targets=["q1"], start_flux_v=-0.3, end_flux_v=0.3,
                           num_flux_points=5, num_averages=2)
     experiment = make_experiment(C, backend, roster, params)
     experiment.sweep_axes = experiment.define_sweep()

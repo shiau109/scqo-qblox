@@ -47,7 +47,7 @@ def test_benchmarking_sweeps_the_knob_the_gate_calibrates(tmp_path, roster):
     cls = get("qubit_deterministic_benchmarking")
     _, exp = _prepared(cls, tmp_path, roster, cls.Parameters(
         targets=["q1"], target_gate="x180", num_averages=2,
-        min_amp_factor=0.3, max_amp_factor=0.5, num_amp_points=5))
+        start_amp_factor=0.3, end_amp_factor=0.5, num_amp_points=5))
 
     assert exp.amp_reference_field() == "pi_amp"
     # the schedule builds, and it builds off pi_amp — change the knob and the
@@ -65,7 +65,7 @@ def test_benchmarking_refuses_a_pi_half_gate_by_name(tmp_path, roster, gate):
     cls = get("qubit_deterministic_benchmarking")
     params = cls.Parameters(
         targets=["q1"], target_gate=gate, num_averages=2,
-        min_amp_factor=0.3, max_amp_factor=0.5, num_amp_points=5)
+        start_amp_factor=0.3, end_amp_factor=0.5, num_amp_points=5)
     backend = make_backend(tmp_path, roster)
     exp = make_experiment(cls, backend, roster, params)
 

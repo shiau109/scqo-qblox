@@ -44,7 +44,7 @@ QBLOX_PROBES = sorted(
 #: keep the schedules small — this test is about the device surface, not physics
 #: (the values still clear each Parameters' own minimums: >4 sweep points, >=100
 #: shots; the per-shot loops are hardware loops, so the schedule stays tiny).
-#: ``max_amp_factor`` is the one value chosen for the COMPILER rather than for
+#: ``end_amp_factor`` is the one value chosen for the COMPILER rather than for
 #: size: the fixture's pi_amp x the stock top factor exceeds the DAC's [-1, 1]
 #: range, which is an amplitude concern and not what this file is about.
 #: Every point-count spelling appears because ``_params`` filters per
@@ -55,7 +55,7 @@ QBLOX_PROBES = sorted(
 SMALL = {"num_points": 5, "num_amp_points": 5, "num_drive_freq_points": 5,
          "num_readout_freq_points": 5, "num_flux_points": 5,
          "num_power_points": 5, "num_averages": 2,
-         "num_shots": 100, "max_amp_factor": 0.5,
+         "num_shots": 100, "end_amp_factor": 0.5,
          # the cryoscopes (dict is field-filtered per experiment): a short
          # 1-ns duration axis / few frames for the ramsey one, a small
          # log-wait x detuning grid + a short square tone for the other
@@ -66,10 +66,10 @@ SMALL = {"num_points": 5, "num_amp_points": 5, "num_drive_freq_points": 5,
 #: by registered name so the reason lives next to the value -- a boolean over
 #: field names would have to re-derive each one.
 PER_EXPERIMENT: dict[str, dict] = {
-    # its amplitude window defaults to 0.9..1.1 and the validator wants
-    # min < max, so SMALL's DAC-safe 0.5 ceiling has to bring the floor along
-    "qubit_deterministic_benchmarking": {"min_amp_factor": 0.3,
-                                         "max_amp_factor": 0.5},
+    # its amplitude window defaults to 0.9 -> 1.1: SMALL's DAC-safe 0.5 end
+    # alone would leave the 0.9 start over the DAC range, so it comes down too
+    "qubit_deterministic_benchmarking": {"start_amp_factor": 0.3,
+                                         "end_amp_factor": 0.5},
     # RB inlines every Clifford of every sequence at every depth into ONE
     # program: the stock 30 sequences x depth 100 is far past what this test
     # needs (and past Q1ASM's program memory)

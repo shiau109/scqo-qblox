@@ -63,7 +63,7 @@ DENIED = {
 #: spellings because the dict is filtered per experiment: `num_amp_points` is the
 #: amplitude capability's, `num_points` the time-sweep carriers'.
 SMALL = {"num_points": 5, "num_amp_points": 5, "num_averages": 2,
-         "max_amp_factor": 0.5, "num_shots": 100}
+         "end_amp_factor": 0.5, "num_shots": 100}
 
 #: a plausible calibrated discriminator, radians (the neutral unit). Negative
 #: because that is what the solve returns; see test_state_discrimination.py.

@@ -68,10 +68,10 @@ class QbloxReadoutPower(ReadoutPower):
             # name instead of dying inside the compiler on `awg_gain`
             amp_abs = check_amp_window(prefactors, view.readout_amp,
                                        target=qubit_name, field="readout_amp")
-            amp_lo, amp_hi = float(amp_abs[0]), float(amp_abs[-1])
+            amp_start, amp_end = float(amp_abs[0]), float(amp_abs[-1])
             sub = Schedule(f"readout_power_{qubit_name}")
             with sub.loop(
-                linspace(amp_lo, amp_hi, prefactors.size, dtype=DType.AMPLITUDE)
+                linspace(amp_start, amp_end, prefactors.size, dtype=DType.AMPLITUDE)
             ) as amp:
                 # prepared_state 0: Reset -> Measure, one bin per shot (shot
                 # mode) or one averaged bin (average mode)

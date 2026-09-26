@@ -39,6 +39,34 @@ def _gate_to_angles(gate: str) -> tuple[float, float]:
     )
 
 
+def _refuse_uneven_amps(amp_factors, name: str) -> None:
+    """An explicit ``amp_prefactors`` list must be EVENLY spaced here — refused by
+    name before any instrument time.
+
+    The probe plays the amplitude axis as a sequencer loop domain,
+    ``linspace(first, last, n)``, so an uneven or out-of-order list such as
+    ``[1.0, 0.9, 1.1]`` would PLAY ``[1.0, 1.05, 1.1]`` while the dataset labels
+    it with the list: silently wrong data. Direction is free (a descending list
+    is a legal traversal order); only the spacing is bound. QM plays the list
+    verbatim (``for_each_``).
+    """
+    import numpy as np
+
+    factors = np.asarray(amp_factors, dtype=float)
+    if factors.size < 3:
+        return
+    steps = np.diff(factors)
+    if not np.allclose(steps, steps[0], rtol=1e-9, atol=1e-12):
+        raise ValueError(
+            f"{name}: amp_prefactors {factors.tolist()} are not evenly spaced. "
+            f"The Qblox sequencer sweeps amplitude as a loop domain from the first "
+            f"value to the last in equal steps, so this list would play "
+            f"{np.linspace(factors[0], factors[-1], factors.size).tolist()}. Give "
+            f"an evenly spaced list (either direction), use start_amp_factor/"
+            f"end_amp_factor/num_amp_points, or run it on the QM backend, which "
+            f"plays a list as given.")
+
+
 @register
 class QbloxQubitDeterministicBenchmarking(QubitDeterministicBenchmarking):
     """Build a multiplexed Deterministic Benchmarking Schedule for a Qblox cluster."""
@@ -66,7 +94,9 @@ class QbloxQubitDeterministicBenchmarking(QubitDeterministicBenchmarking):
         # refuse BEFORE the neutral layer reaches for the unrealized anchor,
         # so the operator gets the reason instead of "has no value yet"
         self._amp_field()
-        return super().define_sweep()
+        sweep = super().define_sweep()
+        _refuse_uneven_amps(sweep["amp_prefactor"], self.name)
+        return sweep
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule

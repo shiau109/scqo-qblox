@@ -6,8 +6,9 @@ refuses anything outside ``[-1, 1]`` in
 reasons that error is not good enough on its own:
 
 * it names ``awg_gain`` — an internal parameter the operator never set — instead
-  of the knob they did set (``max_amp_factor``) or the stored amplitude it
-  multiplies;
+  of the knob they did set (``start_amp_factor`` / ``end_amp_factor`` — either
+  edge may be the larger, the window being a traversal order) or the stored
+  amplitude it multiplies;
 * it fires deep inside compilation, after the schedule is built;
 * the element-level validator that WOULD have caught it
   (``measure.pulse_amp`` is ``Numbers(0, 1)``) is bypassed entirely by the
@@ -33,7 +34,8 @@ MAX_DAC_FRACTION = 1.0
 
 
 def check_amp_window(prefactors: Iterable[float], base: float, *, target: str,
-                     field: str, knob: str = "max_amp_factor") -> np.ndarray:
+                     field: str, knob: str = "start_amp_factor/end_amp_factor"
+                     ) -> np.ndarray:
     """Validate ``prefactors * base`` against the DAC, returning the absolute amps.
 
     Args:
@@ -44,8 +46,9 @@ def check_amp_window(prefactors: Iterable[float], base: float, *, target: str,
         knob: the neutral parameter to lower.
 
     Returns:
-        The absolute amplitudes, so callers use the validated values rather than
-        recomputing the product.
+        The absolute amplitudes, IN THE ORDER GIVEN (a descending window stays
+        descending), so callers use the validated values rather than recomputing
+        the product.
 
     Raises:
         ValueError: when any point would exceed the sequencer's normalized range.

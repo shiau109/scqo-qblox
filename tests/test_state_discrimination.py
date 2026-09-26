@@ -39,7 +39,7 @@ CARRIERS = ["qubit_relaxation", "qubit_ramsey", "qubit_echo", "qubit_power_rabi"
 #: spellings because the dict is filtered per experiment: `num_amp_points` is the
 #: amplitude capability's, `num_points` the time-sweep carriers'.
 SMALL = {"num_points": 5, "num_amp_points": 5, "num_averages": 2,
-         "max_amp_factor": 0.5}
+         "end_amp_factor": 0.5}
 
 #: a plausible calibrated discriminator (rotation in RADIANS, the neutral unit).
 #: NEGATIVE on purpose — that is what the solve returns in practice, and the

@@ -36,7 +36,7 @@ def test_the_message_names_the_knob_the_operator_set():
         check_amp_window([0.9, 2.0], 0.64, target="q1", field="pi_amp")
     message = str(err.value)
     assert "q1" in message
-    assert "max_amp_factor" in message
+    assert "start_amp_factor/end_amp_factor" in message
     assert "pi_amp" in message
     assert "awg_gain" not in message
     # the remedy: 1.0 / 0.64 = 1.5625

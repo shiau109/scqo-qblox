@@ -113,6 +113,6 @@ def test_an_over_range_tone_is_refused_by_name(tmp_path, roster):
     """prefactor x readout_amp above the sequencer's range (0.6 x 1.9 > 1) is
     refused naming the knob, before the compiler reports an internal variable
     nobody has heard of."""
-    with pytest.raises(ValueError, match=r"max_amp_factor"):
-        _run(tmp_path, roster, readout_amp=0.6, max_amp_factor=1.9,
+    with pytest.raises(ValueError, match=r"end_amp_factor"):
+        _run(tmp_path, roster, readout_amp=0.6, end_amp_factor=1.9,
              readout_depletion_ns=400.0)
