@@ -11,6 +11,7 @@ from . import qubit_parity_switch_discrete  # noqa: F401  (import side effect: @
 from . import qubit_power_rabi  # noqa: F401  (import side effect: @register)
 from . import qubit_ramsey  # noqa: F401  (import side effect: @register)
 from . import qubit_ramsey_cryoscope  # noqa: F401  (import side effect: @register)
+from . import qubit_ramsey_flux_pulse  # noqa: F401  (import side effect: @register)
 from . import qubit_ramsey_phasor  # noqa: F401  (import side effect: @register)
 from . import qubit_relaxation  # noqa: F401  (import side effect: @register)
 from . import qubit_resonator_stark  # noqa: F401  (import side effect: @register)
@@ -42,6 +43,7 @@ __all__ = [
     "qubit_sqrb",
     "qubit_ramsey",
     "qubit_ramsey_cryoscope",
+    "qubit_ramsey_flux_pulse",
     "qubit_ramsey_phasor",
     "qubit_spectroscopy_cryoscope",
     "qubit_power_rabi",

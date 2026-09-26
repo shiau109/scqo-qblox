@@ -57,6 +57,10 @@ DENIED = {
     # one. The QM twin already opts in; that repo has no pending-hardware bar.
     "qubit_ramsey_phasor": "not yet validated on hardware",
     "qubit_spectroscopy_cryoscope": "not yet validated on hardware",
+    # a Ramsey whose Reset and readout both stay at the idle point (the z pulse
+    # only runs inside the idle), so active reset is physically valid; the QM twin
+    # opts in. A hardware-validation gate, as for qubit_ramsey_phasor.
+    "qubit_ramsey_flux_pulse": "not yet validated on hardware",
 }
 
 #: small but legal for every probe's own Parameters minimums. Two point-count
