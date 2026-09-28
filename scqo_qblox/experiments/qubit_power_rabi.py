@@ -2,6 +2,10 @@
 
 Amplitude sweep: X(amp) — Measure, looping the drive amplitude. Parameters, the cosine
 fit, pi_amp recovery and writeback are inherited from ``scqo.experiments.QubitPowerRabi``.
+
+The coupler-as-a-target fields (``drive_line``, ``readout_member``; SCQO
+docs/coupler-transmon-plan.md) are refused BY NAME: this backend adopts no borrowed
+drive channel and plays no mapped readout, so v1 runs them on QM (MW-FEM) only.
 """
 
 from __future__ import annotations
@@ -25,6 +29,16 @@ class QbloxQubitPowerRabi(QubitPowerRabi):
     supports_active_reset: ClassVar[bool] = True
 
     def probe(self) -> Any:
+        routed = [f"{field}={getattr(self.params, field)!r}"
+                  for field in ("drive_line", "readout_member")
+                  if getattr(self.params, field, None) is not None]
+        if routed:
+            raise NotImplementedError(
+                f"{', '.join(routed)} is not realized on the Qblox backend yet: it "
+                f"adopts no borrowed drive channel and plays no mapped readout, so "
+                f"a target driven through another line or read through a pair "
+                f"member runs on QM (MW-FEM) only - SCQO "
+                f"docs/coupler-transmon-plan.md")
         from qblox_scheduler import Schedule
         from qblox_scheduler.operations import IdlePulse, Measure, X
         from qblox_scheduler.operations.loop_domains import DType, arange, linspace

@@ -1035,7 +1035,9 @@ class QbloxDeviceModel(DeviceModel):
             raise KeyError(
                 f"{name!r} is a BORROWED channel ({e.kind} of {e.target[0]!r} "
                 f"through line {e.line!r}) and the dut config holds no element "
-                f"realizing it - the vendor config must adopt it first")
+                f"realizing it - the vendor config must adopt it first, and the "
+                f"Qblox backend adopts no borrowed channel yet (QM MW-FEM only: "
+                f"SCQO docs/coupler-transmon-plan.md)")
         view_cls = _CHANNEL_VIEWS.get(e.kind)
         if view_cls is None:
             raise KeyError(

@@ -121,6 +121,11 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
   no flux, pump/multi-target channels, a BORROWED channel no element adopts, a
   target with no element — is a KeyError.
   A view's `.name` is the ENTITY name; `_element.name` is the vendor element.
+  No borrowed channel is adopted here at all yet, so SCQO's coupler-as-a-target
+  fields (`drive_line`, `readout_member`; SCQO docs/coupler-transmon-plan.md, v1 =
+  QM MW-FEM only) are refused by name: the Session's gate hears this KeyError, and
+  `qubit_power_rabi`'s probe refuses either field itself (a `drive_line` naming the
+  target's own line passes the gate).
 - The agent's `hardware_configuration` dict is AUTHORITATIVE: every run recompiles from
   it and re-pushes attenuations, so a direct qcodes `.set()` is overwritten.
 - `save()` writes BOTH config files (`dut_config.json` + `hw_config.json`); the dut's
@@ -465,5 +470,6 @@ don't over-narrow.
 | `test_asyncio_noise.py` | the WinError-87 shutdown suppressor: what it swallows, what it must NOT, idempotence, and that `acquire()` installs it even when the run raises |
 | `test_preview.py` | `QbloxBackend.preview`: both compiled artifacts render offline, no `_sync_att_limits` call, pinned `--out` dir overwrites in place, the rendered-shot cap refuses lab-sized schedules by name |
 | `test_new_probe_contracts.py` | the two silent-wrong-data regressions the 2026-08 probe batch shipped with: benchmarking sweeps `amp_reference_field()`'s knob and refuses a pi/2 gate BY NAME, the x90 knobs stay Unrealized, broadband-qubit refuses a second target (its resonator sibling's broadcast is pinned as CORRECT), `chunk_timeout_s` counts the reset |
+| `test_coupler_transmon.py` | SCQO's `drive_line` / `readout_member` refused BY NAME: `qubit_power_rabi`'s probe, and the borrowed-channel KeyError the Session's gate surfaces |
 | `test_experiment_registration.py` | every experiment module has its `__init__` import line (both directions) |
 | `test_scqo_glue.py` | the `scqo` CLI works in THIS venv + the qblox factory (slow — see above); the per-kind drift pin over channel AND line fields; the entity surface: the flux LINE view, borrowed/operation/composite refusals by name, `snapshot()` shape, `line_ports()` |
