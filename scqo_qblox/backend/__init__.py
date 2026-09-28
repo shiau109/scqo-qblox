@@ -5,6 +5,7 @@ from .qblox_backend import (
     QbloxDeviceModel,
     QbloxDriveChannel,
     QbloxFluxChannel,
+    QbloxFluxLine,
     QbloxReadoutChannel,
 )
 
@@ -13,5 +14,6 @@ __all__ = [
     "QbloxDeviceModel",
     "QbloxDriveChannel",
     "QbloxFluxChannel",
+    "QbloxFluxLine",
     "QbloxReadoutChannel",
 ]

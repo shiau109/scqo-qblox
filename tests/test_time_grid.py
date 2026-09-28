@@ -125,7 +125,7 @@ def test_thermalization_write_is_snapped_to_the_grid(tmp_path, roster):
     this field), not refused — the calibration loop must be able to write its
     own result."""
     backend = make_backend(tmp_path, roster)
-    xy = backend.device.component("q1_xy")
+    xy = backend.device.component("xy1.q1")
 
     xy.thermalization_time_s = 2.0046496799999997e-4  # 10 x a real chipA T1
     assert xy.thermalization_time_s == pytest.approx(200465e-9, rel=0, abs=1e-15)
@@ -140,7 +140,7 @@ def test_pi_duration_refuses_a_sub_nanosecond_length(tmp_path, roster):
     measured against a specific length. (The reset wait rounds; the difference
     is deliberate and mirrored on QM.)"""
     backend = make_backend(tmp_path, roster)
-    xy = backend.device.component("q1_xy")
+    xy = backend.device.component("xy1.q1")
 
     xy.pi_duration_s = 3.2e-8  # 32 ns, whole ns -> fine
     assert xy.pi_duration_s == pytest.approx(3.2e-8)

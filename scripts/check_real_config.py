@@ -73,7 +73,7 @@ def main() -> int:
     from scqo_qblox.backend.qblox_backend import QbloxDeviceModel
     from scqo.testing import demo_components
 
-    # The driver resolves every name through the ROSTER (q1_ro -> the readout
+    # The driver resolves every name through the ROSTER (fl.q1 -> the readout
     # knobs of vendor element q1), so it is needed before the device model.
     # This throwaway self-test derives a chipT-shaped roster for the discovered
     # elements — one multiplexed feedline + a drive wire each; the REAL roster
@@ -82,7 +82,7 @@ def main() -> int:
 
     dm = QbloxDeviceModel(qd, roster, config_file=str(work / "dut_config.json"))
     snap = dm.snapshot()
-    for name, fields in snap.items():  # keyed by CHANNEL entity (q1_ro, q1_xy)
+    for name, fields in snap.items():  # keyed by entity (fl.q1, xy_q1.q1)
         print(f"      {name}: {fields}")
     print(f"[2/6] snapshot OK | testing targets: {qubits}")
 
@@ -104,9 +104,12 @@ def main() -> int:
             failures.append(experiment)
 
     # the knobs those two experiments write live on the CHANNEL entities:
-    # readout_freq_hz on <q>_ro, pi_amp on <q>_xy
+    # readout_freq_hz on the readout channel, pi_amp on the drive channel - each
+    # qubit's default channel of the kind, from the roster (never from strings)
     after = sess.device_state()
-    touched = [f"{q}_ro" for q in qubits] + [f"{q}_xy" for q in qubits]
+    ro = {q: roster.default_channel(q, "readout") for q in qubits}
+    xy = {q: roster.default_channel(q, "drive") for q in qubits}
+    touched = [ro[q] for q in qubits] + [xy[q] for q in qubits]
     moved = [name for name in touched if after[name] != before[name]]
     print(f"[4/6] writeback reached the real device tree for: {moved or 'NONE'}")
     if set(moved) != set(touched):
@@ -116,8 +119,8 @@ def main() -> int:
     reloaded = QuantumDevice.from_json_file(str(work / "dut_config.json"))
     dm2 = QbloxDeviceModel(reloaded, roster)
     round_trip = all(
-        abs(dm2.snapshot()[f"{q}_ro"]["readout_freq_hz"]
-            - after[f"{q}_ro"]["readout_freq_hz"]) < 1e-3 for q in qubits
+        abs(dm2.snapshot()[ro[q]]["readout_freq_hz"]
+            - after[ro[q]]["readout_freq_hz"]) < 1e-3 for q in qubits
     )
     print(f"[5/6] vendor-format save/reload round-trip: {'OK' if round_trip else 'MISMATCH'}")
     if not round_trip:

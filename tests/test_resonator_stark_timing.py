@@ -42,7 +42,7 @@ def _run(tmp_path, roster, readout_amp=None, **params):
     if readout_amp is not None:
         exp.device.channel("q1", "readout").readout_amp = readout_amp
     readout_amp = float(exp.device.channel("q1", "readout").readout_amp)
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     tof = element.measure.acq_delay
     tof_s = float(tof() if callable(tof) else tof)
     return _events(compile_probe(backend, exp)), tof_s, readout_amp

@@ -32,11 +32,11 @@ def vendor_element(experiment: Any, target: str, kind: str) -> Any:
 
 
 # `idle_flux` used to live here, reading element.flux_params.sweet_spot directly
-# and falling back to 0.0. It is now the REALIZED neutral knob on the flux channel
-# view (backend/fieldmap.py + QbloxFluxChannel), so a probe reads it the same way
-# it reads every other governed value:
+# and falling back to 0.0. It is now the REALIZED neutral knob on the flux LINE
+# view (backend/fieldmap.py + QbloxFluxLine), so a probe reads it the same way it
+# reads every other governed value - through the anchor the fit re-references:
 #
-#     self.device.channel(target, "flux").idle_flux
+#     flux_anchor_v(self, target)       # = self.device.flux_line(target).idle_flux
 #
 # Do not reintroduce a vendor shortcut. The 0.0 fallback is what made the wrong
 # frame invisible: at zero idle the absolute and relative sweeps coincide exactly,

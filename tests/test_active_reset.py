@@ -272,7 +272,7 @@ def test_each_round_is_another_conditional_reset(tmp_path, roster, rounds):
 
 
 def test_the_settle_comes_from_the_knob_and_zero_switches_it_off(tmp_path, roster):
-    """The settle is DEVICE STATE (`q1_ro.readout_depletion_s`, proposed by
+    """The settle is DEVICE STATE (`fl.q1.readout_depletion_s`, proposed by
     resonator_spectroscopy from the measured linewidth), not a per-run number
     this backend picks. 0 must stay legal — it is how you turn it off, and it is
     distinct from 'never calibrated', which refuses."""

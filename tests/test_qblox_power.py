@@ -1,10 +1,11 @@
 """The absolute-power surfaces on the Qblox backend: the output-att solves, the
 authoritative hardware-config write surface, the dual-file save, and power_context.
 
-Greenfield: the two chains live on DIFFERENT entities — ``q1_ro`` (readout) and
-``q1_xy`` (drive) are separate channel views over the SAME vendor element, and
-``power_context`` still takes MODE names (``params.targets``) and resolves both
-default channels through the roster.
+Greenfield: the two chains live on DIFFERENT entities — ``fl.q1`` (readout) and
+``xy1.q1`` (drive), addressed ``<line>.<target>`` since SCQO 4.0.0 — separate
+channel views over the SAME vendor element, and ``power_context`` still takes
+MODE names (``params.targets``) and resolves both default channels through the
+roster.
 
 Offline: a real dut fixture (SCQO/tests/demo_instr_config) + a minimal hw config —
 HardwareAgent validates the config at construction, no cluster is contacted.
@@ -33,14 +34,14 @@ def backend(tmp_path, roster):
 
 
 def test_getter_math(backend):
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
     view.readout_amp = 0.25
     # P = +5 (nominal full scale) - 10 (fixture att) + 20*log10(0.25)
     assert view.readout_power_dbm == pytest.approx(5.0 - 10.0 + 20 * math.log10(0.25))
 
 
 def test_setter_solves_even_att_and_exact_residual(backend):
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
     opts = backend._hw_agent.hardware_configuration.hardware_options
 
     view.readout_power_dbm = -20.0
@@ -65,22 +66,22 @@ def test_setter_solves_even_att_and_exact_residual(backend):
 
 
 def test_zero_amp_power_undefined(backend):
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
     view.readout_amp = 0.0
     with pytest.raises(ValueError, match="absolute power undefined"):
         _ = view.readout_power_dbm
-    assert backend.device.snapshot()["q1_ro"]["readout_power_dbm"] is None
+    assert backend.device.snapshot()["fl.q1"]["readout_power_dbm"] is None
 
 
 def test_drive_getter_math(backend):
-    view = backend.device.component("q1_xy")
+    view = backend.device.component("xy1.q1")
     view.drive_amp = 0.25
     # P = +5 (nominal full scale) - 18 (fixture drive att) + 20*log10(0.25)
     assert view.drive_power_dbm == pytest.approx(5.0 - 18.0 + 20 * math.log10(0.25))
 
 
 def test_drive_setter_solves_even_att_and_exact_residual(backend):
-    view = backend.device.component("q1_xy")
+    view = backend.device.component("xy1.q1")
     opts = backend._hw_agent.hardware_configuration.hardware_options
 
     view.drive_power_dbm = -33.0
@@ -110,13 +111,13 @@ def test_unset_spec_amp_drive_power_undefined(backend):
     """The demo dut carries no spec block: spec_amp deserializes as NaN, so BOTH
     drive fields read unknown (never a NaN leaking through log10 into the config)
     until drive_power_dbm (or drive_amp) is written."""
-    view = backend.device.component("q1_xy")
+    view = backend.device.component("xy1.q1")
     assert math.isnan(view._element.spec.spec_amp)
     with pytest.raises(ValueError, match="absolute drive power undefined"):
         _ = view.drive_power_dbm
     with pytest.raises(ValueError, match="spec_amp is unset"):
         _ = view.drive_amp
-    snap = backend.device.snapshot()["q1_xy"]
+    snap = backend.device.snapshot()["xy1.q1"]
     assert snap["drive_amp"] is None and snap["drive_power_dbm"] is None
 
 
@@ -126,8 +127,8 @@ def test_save_writes_both_files_consistently(backend, roster, tmp_path):
     from qblox_scheduler.backends.qblox_backend import QbloxHardwareCompilationConfig
     from qcodes import Instrument
 
-    backend.device.component("q1_ro").readout_power_dbm = -20.0
-    backend.device.component("q1_xy").drive_power_dbm = -33.0
+    backend.device.component("fl.q1").readout_power_dbm = -20.0
+    backend.device.component("xy1.q1").drive_power_dbm = -33.0
     backend.device.save()
 
     # the separate hw config re-validates and carries the new atts (from_file returns
@@ -152,17 +153,17 @@ def test_save_writes_both_files_consistently(backend, roster, tmp_path):
         output_dir=str(tmp_path / "out2"),
         roster=roster,
     )
-    assert reloaded.device.component("q1_ro").readout_power_dbm == pytest.approx(
+    assert reloaded.device.component("fl.q1").readout_power_dbm == pytest.approx(
         -20.0, abs=1e-9)
-    assert reloaded.device.component("q1_xy").drive_power_dbm == pytest.approx(
+    assert reloaded.device.component("xy1.q1").drive_power_dbm == pytest.approx(
         -33.0, abs=1e-9)
 
 
 def test_power_context_matches_the_views(backend):
     """power_context is addressed by MODE name (params.targets) and resolves the
     target's default readout AND drive channels through the roster."""
-    readout = backend.device.component("q1_ro")
-    drive = backend.device.component("q1_xy")
+    readout = backend.device.component("fl.q1")
+    drive = backend.device.component("xy1.q1")
     readout.readout_power_dbm = -20.0
     drive.drive_power_dbm = -33.0
     ctx = backend.power_context(["q1", "nonexistent"])
@@ -184,7 +185,7 @@ def test_power_context_matches_the_views(backend):
 def test_power_context_readout_survives_unset_spec(backend):
     """An element with no seeded spec_amp still reports its full readout chain —
     the drive block must never take the readout provenance down with it."""
-    backend.device.component("q1_ro").readout_power_dbm = -20.0
+    backend.device.component("fl.q1").readout_power_dbm = -20.0
     ctx = backend.power_context(["q1"])
     assert ctx["q1"]["readout_power_dbm"] == pytest.approx(-20.0, abs=1e-9)
     assert "drive_power_dbm" not in ctx["q1"]  # unknown, not NaN

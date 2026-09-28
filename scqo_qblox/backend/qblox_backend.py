@@ -3,15 +3,20 @@
 ``qblox_scheduler`` is imported lazily (inside methods) so that ``import scqo_qblox`` works
 without the Qblox stack installed, and so the simulated path never needs it.
 
-Since the greenfield model a driver serves a view PER CHANNEL ENTITY, not per
-qubit: the roster's ``q1_xy`` / ``q1_ro`` / ``q1_z`` each carry their own
-function's knobs, and all three resolve onto the SAME qblox_scheduler
-``DeviceElement`` (the channel's single target). ``QbloxDeviceModel.component``
-does that resolution through the roster — never by parsing names.
+Since the greenfield model a driver serves a view PER ENTITY, not per qubit,
+and since SCQO 4.0.0 (docs/store-by-line-plan.md) an entity's name is its
+ADDRESS: the channels ``xy1.q1`` / ``feedline.q1`` / ``z1.q1`` and the flux LINE
+``z1`` (the standing bias exists once per wire) all resolve onto the SAME
+qblox_scheduler ``DeviceElement`` - the target of the channel, or of the one
+flux channel the line carries. ``QbloxDeviceModel.component`` does that
+resolution through the roster — never by parsing names. Qblox exposes no
+gate-macro surface, so declared operations (``q1_q2.iswap``) are refused by
+name, and a BORROWED channel (a mode driven through a line that does not carry
+it by design) has no element until the vendor config adopts one.
 
 Neutral-name mapping: declared ONCE in ``scqo_qblox/backend/fieldmap.py`` (the catalog
 ``scqo state --fields`` renders; drift-tested per channel kind against scqo's knob
-fields). The executable conversions are the three channel views below.
+fields, channel and line). The executable conversions are the views below.
 """
 
 from __future__ import annotations
@@ -27,8 +32,14 @@ from typing import TYPE_CHECKING, Any
 import xarray as xr
 from scqo.backend import Backend
 from scqo.catalog import derived_op
-from scqo.device import ComponentInfo, DeviceModel, EntityView, make_view_base
-from scqo.entities import Channel
+from scqo.device import (
+    ComponentInfo,
+    DeviceModel,
+    EntityView,
+    make_line_view_base,
+    make_view_base,
+)
+from scqo.entities import Channel, Composite, Line, Operation
 from scqo.fieldmap import OperatorCommand, Unrealized, VendorBinding, VendorOnly
 
 from scqo_qblox.backend.fieldmap import (
@@ -386,10 +397,9 @@ def snap_ns(value: float, what: str, *, grid_ns: int = 1) -> float:
 class _QbloxChannelView:
     """Shared plumbing of the three channel views.
 
-    ``name`` is the ROSTER ENTITY name (``q1_ro``) — what scqo addresses and what
-    every error message must cite; the VENDOR element name (``q1``) is
-    ``_element.name`` and is what the port-clock keys are built from. The two were
-    the same string in the pre-greenfield model, which is why the split matters.
+    ``name`` is the ROSTER ENTITY name (``feedline.q1``) — what scqo addresses
+    and what every error message must cite; the VENDOR element name (``q1``) is
+    ``_element.name`` and is what the port-clock keys are built from.
 
     ``hw_agent`` (the backend's HardwareAgent) is needed only by the absolute-power
     knobs: an output attenuation lives in the hardware compilation config, one level
@@ -403,6 +413,18 @@ class _QbloxChannelView:
         self.name = name
         self._element = element
         self._hw_agent = hw_agent
+
+    def __setattr__(self, attr: str, value) -> None:
+        # A write to a name this view does not serve fails LOUDLY. Without it a
+        # knob that moved - idle_flux left the flux CHANNEL for its LINE in SCQO
+        # 4.0.0 - lands in the instance dict and never reaches the element.
+        if (attr == "name" or attr.startswith("_")
+                or isinstance(getattr(type(self), attr, None), property)):
+            object.__setattr__(self, attr, value)
+            return
+        raise AttributeError(
+            f"{getattr(self, 'name', '?')}: {type(self).__name__} serves no "
+            f"field {attr!r}")
 
     @property
     def _qubit(self) -> str:
@@ -443,7 +465,7 @@ class _QbloxChannelView:
 
 
 class QbloxReadoutChannel(_QbloxChannelView, make_view_base("readout")):
-    """The scqo READOUT channel view (``q1_ro``) over the target's ``DeviceElement``.
+    """The scqo READOUT channel view (``feedline.q1``) over the target's ``DeviceElement``.
 
     Carries the dispersive-readout knobs: tone frequency, pulse amplitude/power,
     the pulse/window pair, and the discriminator (rotation + threshold, realized
@@ -563,7 +585,7 @@ class QbloxReadoutChannel(_QbloxChannelView, make_view_base("readout")):
     # decision value is Re(z * e^{+i*theta}) — the DATA turned counterclockwise —
     # while a QM weights angle turns the data clockwise. So this boundary NEGATES
     # as well as converts; both together are what keep
-    # `scqo set q1_ro.readout_rotation_rad=...` meaning the same rotation on both
+    # `scqo set q1.readout_rotation_rad=...` meaning the same rotation on both
     # backends. Missing the negation is not a fit-quality nit: chipA 2026-08-08
     # calibrated at 2.15 rad and the mirrored rotation put BOTH blob centres below
     # acq_threshold, so a discriminated qubit_relaxation read ~0 population at
@@ -630,7 +652,7 @@ class QbloxReadoutChannel(_QbloxChannelView, make_view_base("readout")):
 
 
 class QbloxDriveChannel(_QbloxChannelView, make_view_base("drive")):
-    """The scqo DRIVE channel view (``q1_xy``) over the target's ``DeviceElement``.
+    """The scqo DRIVE channel view (``xy1.q1``) over the target's ``DeviceElement``.
 
     Carries the xy knobs: drive frequency, the calibrated pi pulse (amplitude and
     length), and the saturation-drive pair behind the absolute drive power.
@@ -788,7 +810,16 @@ class QbloxDriveChannel(_QbloxChannelView, make_view_base("drive")):
 
 
 class QbloxFluxChannel(_QbloxChannelView, make_view_base("flux")):
-    """The scqo FLUX channel view (``q1_z``) over the target's ``DeviceElement``.
+    """The scqo FLUX channel view (``z1.q1``) over the target's ``DeviceElement``:
+    KNOB-FREE since 4.0.0. Its fields are the target's transfer-function FACTS
+    (``flux_offset``, ``flux_per_phi0``), physical.json content that never
+    pushes; the view stays as the probes' element door (``_element``) and the
+    doctor's witness. The knobs moved to the LINE (:class:`QbloxFluxLine`)."""
+
+
+class QbloxFluxLine(_QbloxChannelView, make_line_view_base("flux")):
+    """The scqo flux LINE view (``z1``) over the ``DeviceElement`` of the one
+    flux channel it carries.
 
     ``idle_flux`` is the standing bias every relative-frame flux sweep is measured
     FROM: the probes emit ``VoltageOffset(idle_flux)`` and play their excursion on
@@ -806,8 +837,8 @@ class QbloxFluxChannel(_QbloxChannelView, make_view_base("flux")):
     coincide, so silently substituting it hides a wrong-frame sweep instead of
     surfacing it.
 
-    The transfer-function FACTS (flux_offset, flux_per_phi0) are physical.json
-    content and never push, so they bind nothing here.
+    The transfer-function FACTS (flux_offset, flux_per_phi0) live on the flux
+    CHANNEL in physical.json and never push, so they bind nothing here.
     """
 
     @property
@@ -831,7 +862,7 @@ class QbloxFluxChannel(_QbloxChannelView, make_view_base("flux")):
     # hardware_options.latency_corrections[<port-clock>] (seconds) — but no Qblox
     # experiment writes it yet (qubit_xyz_delay is QM-only), so it stays
     # Unrealized (fieldmap.UNREALIZED) with a concrete raising pair, since
-    # make_view_base declares an abstract property per knob of the kind.
+    # make_line_view_base declares an abstract property per knob of the line.
     _FLUX_DELAY_UNREALIZED = (
         "flux_delay_s is Unrealized on the Qblox backend: no XY-Z delay probe is "
         "wired here yet. The home exists — hardware_options.latency_corrections "
@@ -849,13 +880,41 @@ class QbloxFluxChannel(_QbloxChannelView, make_view_base("flux")):
 
 
 #: channel kind -> the view class this backend serves for it. A kind absent here
-#: (``pump``) and every non-channel entity (modes, lines, composites) is a KeyError
-#: from ``component()`` — the contract scqo degrades gracefully against.
+#: (``pump``), every mode, composite and operation, and a line carrying no flux
+#: is a KeyError from ``component()`` — the contract scqo degrades gracefully
+#: against.
 _CHANNEL_VIEWS: dict[str, type[_QbloxChannelView]] = {
     "drive": QbloxDriveChannel,
     "readout": QbloxReadoutChannel,
     "flux": QbloxFluxChannel,
 }
+
+#: channel kind -> the DeviceElement ``ports`` attribute naming its output (the
+#: node the hardware connectivity graph wires to a module output).
+_PORT_ATTR = {"drive": "microwave", "readout": "readout", "flux": "flux"}
+
+
+def _port_nodes(hw_config: Any) -> dict[str, str]:
+    """``element port -> module output node`` (``"q1:mw"`` ->
+    ``"cluster0.module4.complex_output_0"``) over every edge of the
+    connectivity graph, any output kind - display only. The same edge walk as
+    :func:`_port_outputs`, which keeps only complex outputs because an
+    attenuation limit belongs to those."""
+    graph = getattr(getattr(hw_config, "connectivity", None), "graph", None)
+    edges = getattr(graph, "edges", None) if graph is not None else None
+    if edges is None:
+        edges = graph or []
+    found: dict[str, str] = {}
+    for edge in edges:
+        try:
+            a, b = edge
+        except (TypeError, ValueError):
+            continue
+        for node, other in ((a, b), (b, a)):
+            parts = str(node).split(".")
+            if len(parts) == 3 and parts[1].startswith("module"):
+                found.setdefault(str(other), str(node))
+    return found
 
 
 def _read_or_none(view: EntityView, field: str) -> float | None:
@@ -887,11 +946,12 @@ def _derived_operations(roster: "Roster", channel: Channel) -> tuple[str, ...]:
 class QbloxDeviceModel(DeviceModel):
     """Wraps a qblox_scheduler ``QuantumDevice`` (+ optionally its HardwareAgent).
 
-    Entity names are ROSTER names: ``component("q1_ro")`` resolves the channel
-    entity through the roster, takes its KIND and its single TARGET, fetches the
-    vendor element for that target, and returns the matching channel view. The
-    roster is therefore not optional — without it the driver cannot tell what
-    ``q1_ro`` means.
+    Entity names are ROSTER names: ``component("feedline.q1")`` resolves the
+    channel entity through the roster, takes its KIND and its single TARGET,
+    fetches the vendor element for that target, and returns the matching channel
+    view; ``component("z1")`` serves the flux LINE over the element of the one
+    flux channel it carries. The roster is therefore not optional — without it
+    the driver cannot tell what ``feedline.q1`` means.
 
     The agent reference (and its hardware config file path) enables the
     ``*_power_dbm`` surfaces — an output attenuation lives in the hardware
@@ -912,25 +972,70 @@ class QbloxDeviceModel(DeviceModel):
         """The device's authority on which entities exist (read-only)."""
         return self._roster
 
+    def _element(self, name: str, target: str) -> Any:
+        try:
+            return self._qd.get_element(target)
+        except KeyError:
+            raise KeyError(
+                f"{name!r} reaches {target!r}, which is not an element of the "
+                f"loaded dut config (elements: {sorted(self._qd.elements)})"
+            ) from None
+
+    def _line_view(self, name: str) -> EntityView:
+        """The flux LINE view over its one designed flux channel's element."""
+        flux = [c for c in self._roster.channels_on(name) if "flux" in c.kinds]
+        if not flux:
+            raise KeyError(
+                f"{name!r} is a line that carries no flux channel — only a flux "
+                f"line owns fields of its own (idle_flux, flux_delay_s); address "
+                f"the channels riding it: "
+                f"{[c.name for c in self._roster.channels_on(name)]}")
+        if len(flux) > 1:
+            raise KeyError(
+                f"{name!r} carries {len(flux)} flux channels "
+                f"{[c.name for c in flux]} — the Qblox backend serves a flux "
+                f"line over ONE element (a broadcast coil has no single element "
+                f"to hold its bias)")
+        return QbloxFluxLine(name, self._element(name, flux[0].target[0]),
+                             hw_agent=self._hw_agent)
+
     def component(self, name: str) -> EntityView:
         """The view for one vendor-realized entity, addressed by ROSTER name.
 
         KeyError for everything this backend does not realize — an unknown name,
-        a mode/line/composite (Qblox exposes no gate-macro surface), a pump or
-        multi-target channel, and a channel whose target has no element in the
-        dut config. That is the contract: scqo degrades gracefully and the doctor
-        reports the gap against ``components()``.
+        a mode or composite (their values are facts), an operation (Qblox
+        exposes no gate-macro surface), a line carrying no flux, a pump or
+        multi-target channel, a borrowed channel the vendor config does not
+        adopt, and a channel whose target has no element in the dut config.
+        That is the contract: scqo degrades gracefully and the doctor reports
+        the gap against ``components()``.
         """
         e = self._roster.entities.get(name)
         if e is None:
             raise KeyError(
                 f"unknown entity {name!r} — not in this device's roster")
+        if isinstance(e, Line):
+            return self._line_view(name)
+        if isinstance(e, Operation):
+            raise KeyError(
+                f"{name!r} is an operation; the Qblox backend exposes no "
+                f"gate-macro surface, so no operation knob is realized here")
+        if isinstance(e, Composite):
+            raise KeyError(
+                f"{name!r} is a composite; its knobs live on its declared "
+                f"operations, and the Qblox backend exposes no gate-macro "
+                f"surface to realize them")
         if not isinstance(e, Channel):
             channels = [c.name for c in self._roster.channels_of(name)]
             raise KeyError(
                 f"{name!r} is a {type(e).__name__.lower()}; the Qblox backend "
-                f"serves channel entities only (knobs live on channels) — "
+                f"serves channels and flux lines only (knobs live there) — "
                 f"address {channels or '(none wired)'}")
+        if e.borrowed:
+            raise KeyError(
+                f"{name!r} is a BORROWED channel ({e.kind} of {e.target[0]!r} "
+                f"through line {e.line!r}) and the dut config holds no element "
+                f"realizing it - the vendor config must adopt it first")
         view_cls = _CHANNEL_VIEWS.get(e.kind)
         if view_cls is None:
             raise KeyError(
@@ -940,33 +1045,67 @@ class QbloxDeviceModel(DeviceModel):
             raise KeyError(
                 f"{name!r} is a multi-target {e.kind} channel {e.target} — the "
                 f"Qblox backend serves one element per channel")
-        try:
-            element = self._qd.get_element(e.target[0])
-        except KeyError:
-            raise KeyError(
-                f"{name!r} targets {e.target[0]!r}, which is not an element of "
-                f"the loaded dut config (elements: {sorted(self._qd.elements)})"
-            ) from None
-        return view_cls(name, element, hw_agent=self._hw_agent)
+        return view_cls(name, self._element(name, e.target[0]),
+                        hw_agent=self._hw_agent)
+
+    def _realized(self, names) -> dict[str, EntityView]:
+        out: dict[str, EntityView] = {}
+        for name in names:
+            try:
+                out[name] = self.component(name)
+            except KeyError:
+                continue
+        return out
 
     def components(self) -> dict[str, ComponentInfo]:
         """Derived inventory (the doctor's WITNESS, never truth): every roster
-        channel this backend actually serves a view for, with the kind it serves
-        it AS — ``vendor_checks`` FAILS on a kind disagreement, so this reports
-        the channel's kind, not an element type (element_type cannot distinguish
-        a coupler from a qubit; the roster arbitrates). Composites are absent:
-        no Qblox gate-macro surface exists yet.
+        channel and flux line this backend actually serves a view for, with the
+        kind it serves it AS — ``vendor_checks`` FAILS on a kind disagreement, so
+        this reports the roster's kind, not an element type (element_type
+        cannot distinguish a coupler from a qubit; the roster arbitrates).
+        Operations are absent: no Qblox gate-macro surface exists yet.
         """
-        elements = set(self._qd.elements)
         out: dict[str, ComponentInfo] = {}
-        for name, ch in self._roster.channels().items():
-            if ch.kind not in _CHANNEL_VIEWS or len(ch.target) != 1:
-                continue
-            if ch.target[0] not in elements:
-                continue
+        channels = {n: e for n, e in self._roster.entities.items()
+                    if isinstance(e, Channel)}
+        for name in self._realized(channels):
+            ch = channels[name]
             out[name] = ComponentInfo(
                 kind=ch.kind, target=tuple(ch.target), line=ch.line,
                 operations=_derived_operations(self._roster, ch))
+        for name in self._realized(self._roster.lines()):
+            out[name] = ComponentInfo(
+                kind="line", line=name,
+                target=tuple(t for c in self._roster.channels_on(name)
+                             if "flux" in c.kinds for t in c.target))
+        return out
+
+    def line_ports(self) -> dict[str, str]:
+        """``{line: module output}`` (``"cluster0.module4.complex_output_0"``)
+        from the hardware connectivity graph, through each designed channel's
+        element port - display only; several outputs on one line are joined
+        with ", ". Empty without a HardwareAgent; never raises."""
+        hw = (self._hw_agent.hardware_configuration
+              if self._hw_agent is not None else None)
+        try:
+            nodes = _port_nodes(hw) if hw is not None else {}
+        except Exception:  # noqa: BLE001 - display only
+            return {}
+        out: dict[str, str] = {}
+        for line in self._roster.lines():
+            labels: list[str] = []
+            for ch in self._roster.channels_on(line):
+                for kind in ch.kinds:  # a combined wire: every function's port
+                    try:
+                        element = self._qd.get_element(ch.target[0])
+                        port = getattr(element.ports, _PORT_ATTR[kind])
+                    except Exception:  # noqa: BLE001 - display only
+                        continue
+                    node = nodes.get(str(port))
+                    if node and node not in labels:
+                        labels.append(node)
+            if labels:
+                out[line] = ", ".join(labels)
         return out
 
     def config_texts(self) -> dict[str, str]:
@@ -1013,21 +1152,21 @@ class QbloxDeviceModel(DeviceModel):
                 f.write(texts["dut_config.json"] if texts else self._qd.to_json())
 
     def snapshot(self) -> dict:
-        """``{entity: {knob: value}}`` over the channel entities this backend
-        realizes, reporting only the knobs the fieldmap declares BOUND (the
-        Unrealized ones have no vendor value to seed from). None for a knob a
+        """``{entity: {knob: value}}`` over the channels and flux lines this
+        backend realizes, reporting only the knobs of each one's compiled field
+        set that the fieldmap declares BOUND (the Unrealized ones have no vendor
+        value to seed from); an entity with none is absent. None for a knob a
         given element cannot answer — a real lab device tree carries elements
         without a spec slot, and provenance must never crash a session."""
+        bound = {f for kind in FIELD_BINDINGS.values() for f in kind}
+        names = [n for n, e in self._roster.entities.items()
+                 if isinstance(e, (Channel, Line))]
         state: dict[str, dict] = {}
-        for name, ch in self._roster.channels().items():
-            try:
-                view = self.component(name)
-            except KeyError:
-                continue  # not realized here: absent from the snapshot entirely
-            state[name] = {
-                field: _read_or_none(view, field)
-                for field in FIELD_BINDINGS.get(ch.kind, {})
-            }
+        for name, view in self._realized(names).items():
+            fields = [f for f, spec in self._roster.fields_of(name).items()
+                      if spec.role == "knob" and f in bound]
+            if fields:
+                state[name] = {f: _read_or_none(view, f) for f in fields}
         return state
 
 
@@ -1102,8 +1241,9 @@ class QbloxBackend(Backend):
         return self._roster
 
     def field_bindings(self) -> dict[str, dict[str, VendorBinding]]:
-        """The declared per-CHANNEL-KIND neutral-knob catalog (scqo_qblox.backend.fieldmap)
-        — the conversion CODE is the channel views above; this is its description."""
+        """The declared per-CHANNEL-KIND neutral-knob catalog (scqo_qblox.backend.fieldmap),
+        channel and line fields of each kind — the conversion CODE is the views
+        above; this is its description."""
         return {kind: dict(bindings) for kind, bindings in FIELD_BINDINGS.items()}
 
     def unrealized(self) -> dict[str, dict[str, Unrealized]]:
@@ -1113,6 +1253,10 @@ class QbloxBackend(Backend):
     def vendor_only(self) -> dict[str, VendorOnly]:
         """Qblox-unique calibration knobs, vendor-owned (see fieldmap)."""
         return dict(VENDOR_ONLY)
+
+    def line_ports(self) -> dict[str, str]:
+        """``{line: module output}`` (see :meth:`QbloxDeviceModel.line_ports`)."""
+        return self._device.line_ports()
 
     def operator_commands(self) -> tuple[OperatorCommand, ...]:
         """This driver's vendor operator CLIs (see fieldmap) — the other half of

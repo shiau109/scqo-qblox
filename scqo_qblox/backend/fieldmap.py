@@ -1,17 +1,21 @@
 """Declarative field catalog for the Qblox backend — PURE DATA, no vendor imports.
 
-Keyed by CHANNEL KIND (``drive`` / ``readout`` / ``flux``) since the greenfield
-model: knobs live on channel entities (``q1_xy``, ``q1_ro``, ``q1_z``), not on a
-single per-qubit component. Per kind, one :class:`scqo.fieldmap.VendorBinding`
-per realized KNOB (where it lives on the qblox_scheduler device tree, in what
-unit, converted how — as a DESCRIPTION), one :class:`scqo.fieldmap.Unrealized`
-per knob this backend cannot realize, plus the
-:class:`scqo.fieldmap.VendorOnly` inventory of calibration-relevant knobs that
-have no neutral counterpart yet. The EXECUTABLE conversions live in the three
-channel views of ``qblox_backend.py`` (``QbloxDriveChannel`` /
-``QbloxReadoutChannel`` / ``QbloxFluxChannel``) — this module documents them and
-is pinned to the implementation by ``tests/test_scqo_glue.py``
-(bindings | unrealized == scqo's KNOB fields per kind; imports stay vendor-free).
+Keyed by CHANNEL KIND (``drive`` / ``readout`` / ``flux``): knobs live on the
+entities a kind puts on the device - its channels (``xy1.q1``, ``feedline.q1``)
+and, for flux, the LINE it rides (``z1``: the standing bias and the output delay
+exist once per wire). Field names are unique per kind, so one map per kind
+covers both levels and the catalog says which level a field is. Per kind, one
+:class:`scqo.fieldmap.VendorBinding` per realized KNOB (where it lives on the
+qblox_scheduler device tree, in what unit, converted how — as a DESCRIPTION),
+one :class:`scqo.fieldmap.Unrealized` per knob this backend cannot realize, plus
+the :class:`scqo.fieldmap.VendorOnly` inventory of calibration-relevant knobs
+that have no neutral counterpart yet. The EXECUTABLE conversions live in the
+views of ``qblox_backend.py`` (``QbloxDriveChannel`` / ``QbloxReadoutChannel`` /
+``QbloxFluxLine``) — this module documents them and is pinned to the
+implementation by ``tests/test_scqo_glue.py`` (bindings | unrealized == scqo's
+KNOB fields per kind, channel and line; imports stay vendor-free). Operation
+knobs (``OPERATION_FIELDS``) bind nothing here: Qblox has no gate-macro
+surface.
 
 MONITORS are absent by construction: ``fidelity_g``/``fidelity_e``/``pos_*`` are
 measured performance OF the current knobs, never pushed, so they need no vendor

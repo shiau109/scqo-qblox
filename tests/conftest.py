@@ -1,14 +1,17 @@
 """Shared fixtures for the Qblox driver tests (greenfield entity model).
 
-The backend now takes the device ROSTER: a driver serves a view per CHANNEL
-ENTITY (``q1_ro`` / ``q1_xy`` / ``q1_z``), and only the roster says what those
-names mean — which kind's knobs they carry and which vendor element they land
-on. :data:`ROSTER_TOML` describes the real dut fixture
+The backend now takes the device ROSTER: a driver serves a view per ENTITY,
+addressed since SCQO 4.0.0 by its ADDRESS — the channels ``<line>.<target>``
+(``fl.q1`` / ``xy1.q1`` / ``z1.q1``) and the flux LINE itself (``z1``, the
+owner of the standing bias) — and only the roster says what those names mean:
+which kind's knobs they carry and which vendor element they land on.
+:data:`ROSTER_TOML` describes the real dut fixture
 (``SCQO/tests/demo_instr_config`` — elements q1, q2 and the tunable coupler
-c12) in the schema-3 vocabulary.
+c12) in the schema-3 components.toml vocabulary (unchanged by 4.0.0).
 
-Probes read their neutral state through ``self.device.channel(target, kind)``,
-which the Session serves as a :class:`~scqo.device.RecordingDevice` over the
+Probes read their neutral state through ``self.device.channel(target, kind)``
+(the standing flux bias through ``self.device.flux_line(target)``), which the
+Session serves as a :class:`~scqo.device.RecordingDevice` over the
 vendor tree; :func:`recording_device` builds the same surface for a test that
 drives a probe directly (store path ``None`` = validated, not persisted).
 """
@@ -27,10 +30,13 @@ DUT_FIXTURE = FIXTURES / "QBlox_Scheduler" / "dut_config_AS_QRC.json"
 HW_MIN = REPO / "tests" / "fixtures" / "hw_config_min.json"
 
 #: The fixture chip in the greenfield schema: ONE multiplexed feedline (the
-#: readout riders mint q1_res/q1_ro and q2_res/q2_ro), a drive and a flux wire
-#: per qubit (q1_xy/q1_z, q2_xy/q2_z), and the tunable coupler c12 — an ordinary
-#: flux_transmon mode with its own flux wire (c12_z), referenced as the pair's
-#: coupler. The pair itself carries no Qblox surface (no gate macros), which is
+#: readout riders mint q1_res/fl.q1 and q2_res/fl.q2), a drive and a flux wire
+#: per qubit (xy1.q1 + the line z1 over its channel z1.q1, likewise xy2.q2 and
+#: z2/z2.q2), and the tunable coupler c12 — an ordinary flux_transmon mode with
+#: its own flux wire (zc/zc.c12), referenced as the pair's coupler. Every drive
+#: line also LENDS itself to the other drivable modes (the borrowed xy1.q2,
+#: xy1.c12, xy2.q1, xy2.c12), which no element realizes. The pair's declared
+#: operation (q1_q2.cz) carries no Qblox surface (no gate macros), which is
 #: exactly what components() must report.
 ROSTER_TOML = """\
 schema = 3
@@ -116,8 +122,8 @@ def make_backend(tmp_path: Path, roster, *, hw_config: dict | None = None):
 
 def recording_device(backend, roster):
     """The device surface an experiment reads through — what the Session hands
-    to ``exp.device``: channel-entity views over the vendor tree, knobs seeded
-    from the instrument (pull), backed by an in-memory store."""
+    to ``exp.device``: channel and flux-line views over the vendor tree, knobs
+    seeded from the instrument (pull), backed by an in-memory store."""
     from scqo.device import RecordingDevice
     from scqo.stores import state_store
 

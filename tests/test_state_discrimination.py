@@ -103,10 +103,10 @@ def test_rotation_is_stored_in_degrees_on_the_element(tmp_path, roster):
     the negation live at this one boundary — without both, the same `scqo set`
     means two different rotations per backend."""
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
 
     view.readout_rotation_rad = math.pi / 4
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     assert float(element.measure.acq_rotation) == pytest.approx(315.0)
     assert view.readout_rotation_rad == pytest.approx(math.pi / 4)
 
@@ -120,8 +120,8 @@ def test_a_negative_rotation_is_folded_into_the_vendor_range(tmp_path, roster):
     from qblox_scheduler.backends.qblox import constants
 
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
-    element = backend.device.component("q1_ro")._element
+    view = backend.device.component("fl.q1")
+    element = backend.device.component("fl.q1")._element
 
     for value in (-0.38962897776554817, -3.0, 0.0, math.pi, 7.5, -12.0):
         view.readout_rotation_rad = value
@@ -143,10 +143,10 @@ def test_threshold_needs_no_folding(tmp_path, roster):
     from qblox_scheduler.backends.qblox import constants
 
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
 
     view.readout_threshold = THRESHOLD
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     assert (constants.MIN_DISCRETIZATION_THRESHOLD_ACQ
             <= float(element.measure.acq_threshold)
             <= constants.MAX_DISCRETIZATION_THRESHOLD_ACQ)
@@ -157,10 +157,10 @@ def test_threshold_round_trips_unconverted(tmp_path, roster):
     probes acquire in (the compiler multiplies by integration_length; an
     SSBIntegrationComplex result is divided by acq_duration)."""
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
 
     view.readout_threshold = THRESHOLD
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     assert float(element.measure.acq_threshold) == pytest.approx(THRESHOLD)
     assert view.readout_threshold == pytest.approx(THRESHOLD)
 
@@ -168,7 +168,7 @@ def test_threshold_round_trips_unconverted(tmp_path, roster):
 def test_rus_threshold_is_still_unrealized(tmp_path, roster):
     """Repeat-until-success is QM-only — there is no acq_rus knob to write."""
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
 
     with pytest.raises(NotImplementedError, match="rus"):
         view.readout_rus_threshold = -1e-4
@@ -554,7 +554,7 @@ def test_the_element_rotation_is_the_vendors_handedness(tmp_path, roster):
     backend, exp = _ssro_on_blobs(tmp_path, roster, CHIPA_0808_G, CHIPA_0808_E)
     exp.update()
 
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     theta = math.radians(float(element.measure.acq_rotation))
     threshold = float(element.measure.acq_threshold)
 
@@ -574,7 +574,7 @@ def test_rotation_round_trip_is_a_fixed_point(tmp_path, roster):
     round trip emitted a junk `coupled_to` history row on every write to any other
     readout knob (chipA 19:22:43: -1.177144608928629 -> -1.1771446089286293)."""
     backend = make_backend(tmp_path, roster)
-    view = backend.device.component("q1_ro")
+    view = backend.device.component("fl.q1")
 
     for value in (CHIPA_STANDING_ROTATION, CHIPA_TRUE_ROTATION, 0.7853981633974483, -3.0):
         view.readout_rotation_rad = value

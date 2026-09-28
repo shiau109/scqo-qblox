@@ -98,11 +98,13 @@ def _run_taps(session: Any, run_id: str, target: str) -> tuple[list, list]:
 
 
 def _flux_portclock(session: Any, target: str) -> tuple[str, str]:
-    """``(channel, port-clock key)`` for ``target``'s flux line — the roster
-    resolves the channel (q1 -> q1_z), the vendor element names the port."""
-    channel = session.backend.roster.default_channel(target, FLUX_KIND)
-    port = session.backend.device.component(channel)._element.ports.flux
-    return channel, f"{port}-{BASEBAND_CLOCK}"
+    """``(line, port-clock key)`` for ``target``'s flux line — the roster
+    resolves the line (q1 -> z1, which owns the taps since 4.0.0), the vendor
+    element behind it names the port."""
+    roster = session.backend.roster
+    line = roster.entities[roster.default_channel(target, FLUX_KIND)].line
+    port = session.backend.device.component(line)._element.ports.flux
+    return line, f"{port}-{BASEBAND_CLOCK}"
 
 
 def _hardware_options(session: Any) -> Any:
@@ -161,13 +163,14 @@ def clear_distortion(
 ) -> dict[str, Any]:
     """Remove ``target``'s distortion-correction entry — the fresh-line reset
     before a clean-slate cryoscope characterization. Returns
-    ``{"target", "portclock", "removed", "config_files", "saved"}``. OFFLINE.
+    ``{"target", "line", "portclock", "removed", "config_files", "saved"}``.
+    OFFLINE.
     """
     if session is None:
         from scqo.cli import build_session  # lazy: keep module import scqo-free
 
         session, _cfg = build_session(config_path)
-    channel, portclock = _flux_portclock(session, target)
+    line, portclock = _flux_portclock(session, target)
     opts = _hardware_options(session)
     corrections = opts.distortion_corrections or {}
     removed = _existing_pairs(corrections.get(portclock), portclock)
@@ -176,7 +179,7 @@ def clear_distortion(
     did_save = bool(save and not dry_run)
     if did_save:
         session.backend.device.save()
-    return {"target": target, "channel": channel, "portclock": portclock,
+    return {"target": target, "line": line, "portclock": portclock,
             "removed": removed, "config_files": _config_paths(session),
             "saved": did_save}
 
@@ -195,14 +198,14 @@ def apply_distortion_from_state(
 
     Resolves the ACTIVE scqo selection (unless ``session`` is injected — for
     tests) and takes the taps from ``run_id``'s saved fit when given, else from
-    the accepted facts on the target's flux channel. Converts them through the
+    the accepted facts on the target's flux LINE. Converts them through the
     4-stage bank (:func:`to_qblox_distortion`; overflow reported LOUDLY, never
     silently dropped), writes ONE ``QbloxHardwareDistortionCorrection`` under
     ``"<flux_port>-cl0.baseband"`` and (unless ``dry_run``/``save=False``) saves
     both config files. ``replace=False`` merges the existing stages with the new
     taps and re-partitions — the bank cannot append. OFFLINE.
 
-    Returns a summary dict: ``target``, ``channel``, ``portclock``, ``run_id``,
+    Returns a summary dict: ``target``, ``line``, ``portclock``, ``run_id``,
     ``amps``, ``taus_s``, ``existing_taps``, ``kept``, ``overflow``,
     ``config_files``, ``saved``. Raises ``SystemExit`` when no taps are
     available or none is representable.
@@ -212,15 +215,15 @@ def apply_distortion_from_state(
 
         session, _cfg = build_session(config_path)
 
-    channel, portclock = _flux_portclock(session, target)
+    line, portclock = _flux_portclock(session, target)
     if run_id is not None:
         amps, taus_s = _run_taps(session, run_id, target)
     else:
-        amps = session.physical.get(channel, "distortion_amp")
-        taus_s = session.physical.get(channel, "distortion_tau_s")
+        amps = session.physical.get(line, "distortion_amp")
+        taus_s = session.physical.get(line, "distortion_tau_s")
         if amps is None or taus_s is None:
             raise SystemExit(
-                f"no accepted distortion facts for {channel} — run and accept a "
+                f"no accepted distortion facts on {line} — run and accept a "
                 f"cryoscope for {target!r} first (distortion_amp/distortion_tau_s "
                 f"are unset in physical.json), or apply straight from a run with "
                 f"--run <run_id>"
@@ -271,7 +274,7 @@ def apply_distortion_from_state(
 
     return {
         "target": target,
-        "channel": channel,
+        "line": line,
         "portclock": portclock,
         "run_id": run_id,
         "amps": [float(a) for a in amps],

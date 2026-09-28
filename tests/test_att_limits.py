@@ -54,8 +54,8 @@ def test_the_ceiling_clamps_the_attenuation_not_the_power():
     power at the port, just less DAC range. Silently pushing 38 is what the
     instrument refused."""
     target = -40.0
-    wide_att, wide_amp = _solve_att("q1_xy", target, "spec_amp", 60)
-    narrow_att, narrow_amp = _solve_att("q1_xy", target, "spec_amp", 30)
+    wide_att, wide_amp = _solve_att("xy1.q1", target, "spec_amp", 60)
+    narrow_att, narrow_amp = _solve_att("xy1.q1", target, "spec_amp", 30)
 
     assert wide_att == 38 and narrow_att == 30
     assert narrow_amp < wide_amp  # the cost is dynamic range...
@@ -69,7 +69,7 @@ def test_the_ceiling_never_makes_the_amplitude_illegal():
     point cannot be broken by a narrower attenuator (the >0.5 warning belongs to
     a target too HIGH for the chain, which is a different failure)."""
     for max_att in (20, 30, 60):
-        _att, amp = _solve_att("q1_xy", -40.0, "spec_amp", max_att)
+        _att, amp = _solve_att("xy1.q1", -40.0, "spec_amp", max_att)
         assert 0 < amp <= 0.5
 
 
@@ -144,10 +144,10 @@ def test_a_modest_attenuation_never_dials_the_cluster(backend, monkeypatch):
 
 def test_a_high_attenuation_makes_the_chain_suspect(backend):
     """...and one solved past that point does have to be checked."""
-    backend.device.component("q1_xy").drive_power_dbm = -40.0
+    backend.device.component("xy1.q1").drive_power_dbm = -40.0
     suspect = backend._suspect_chains()
     assert "q1:mw-q1.01" in suspect
-    assert suspect["q1:mw-q1.01"].name == "q1_xy"
+    assert suspect["q1:mw-q1.01"].name == "xy1.q1"
 
     # once the ceiling is known and the value fits under it, the question is
     # settled and the cluster is never asked again
@@ -158,7 +158,7 @@ def test_a_high_attenuation_makes_the_chain_suspect(backend):
 def test_an_unreachable_cluster_warns_and_leaves_the_solve_alone(backend, monkeypatch):
     """Cosmetic knowledge must degrade to 'you will hear about it from the
     instrument', never to a failed run before the schedule is even built."""
-    backend.device.component("q1_xy").drive_power_dbm = -40.0
+    backend.device.component("xy1.q1").drive_power_dbm = -40.0
 
     def unreachable():
         raise TimeoutError("timed out")
@@ -188,7 +188,7 @@ def test_a_narrow_output_is_re_solved_before_the_probe_runs(backend, monkeypatch
     output only reaches 30 dB, and land on a legal attenuation carrying exactly
     the same power. The re-solve goes through the RAW view, so it is a hardware
     correction and not a calibration proposal."""
-    view = backend.device.component("q1_xy")
+    view = backend.device.component("xy1.q1")
     view.drive_power_dbm = -40.0
     opts = backend._hw_agent.hardware_configuration.hardware_options
     assert opts.output_att["q1:mw-q1.01"] == 38  # what the instrument refused
@@ -212,7 +212,7 @@ def test_the_discovered_ceiling_is_remembered_for_the_next_process(
     PHYSICALLY by slot/output — the ceiling belongs to the module, so rewiring a
     port must not inherit the old one. A new backend over the same folder solves
     right the first time, with no cluster and no warning."""
-    backend.device.component("q1_xy").drive_power_dbm = -40.0
+    backend.device.component("xy1.q1").drive_power_dbm = -40.0
     cluster, slot, out = _port_outputs(backend._hw_agent.hardware_configuration)["q1:mw"]
     monkeypatch.setattr(
         backend._hw_agent, "get_clusters",
@@ -226,7 +226,7 @@ def test_the_discovered_ceiling_is_remembered_for_the_next_process(
 
     fresh = make_backend(tmp_path, roster)
     assert _att_limits(fresh._hw_agent)["q1:mw-q1.01"] == 30
-    fresh.device.component("q1_xy").drive_power_dbm = -40.0
+    fresh.device.component("xy1.q1").drive_power_dbm = -40.0
     fresh_opts = fresh._hw_agent.hardware_configuration.hardware_options
     assert fresh_opts.output_att["q1:mw-q1.01"] == 30  # right on the first solve
     assert fresh._suspect_chains() == {}  # ...so nothing to ask the cluster

@@ -40,8 +40,8 @@ def test_thermalization_time_round_trips_1_to_1(tmp_path, roster):
     """Absolute seconds on both sides — a pass-through, no conversion. This is
     the backend where the neutral field maps exactly onto the vendor knob."""
     backend = make_backend(tmp_path, roster)
-    xy = backend.device.component("q1_xy")
-    element = backend.device.component("q1_xy")._element
+    xy = backend.device.component("xy1.q1")
+    element = backend.device.component("xy1.q1")._element
 
     xy.thermalization_time_s = 3.715e-4
     assert xy.thermalization_time_s == pytest.approx(3.715e-4)
@@ -82,7 +82,7 @@ def test_per_run_override_sets_and_reverts_exactly(tmp_path, roster):
     from scqo.experiments import get
 
     backend = make_backend(tmp_path, roster)
-    xy = backend.device.component("q1_xy")
+    xy = backend.device.component("xy1.q1")
     xy.thermalization_time_s = 5.0e-4
     cls = get("qubit_relaxation")
 

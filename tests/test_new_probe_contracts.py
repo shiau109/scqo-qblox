@@ -82,7 +82,7 @@ def test_the_x90_knobs_stay_unrealized(tmp_path, roster):
     backend = make_backend(tmp_path, roster)
     # the BACKEND view, not a Session's RecordingDevice: these knobs raise from
     # the vendor view itself, which is the layer a writeback would reach
-    drive = backend.device.component("q1_xy")
+    drive = backend.device.component("xy1.q1")
 
     for knob in ("pi_amp_x90", "drag_beta_x90"):
         with pytest.raises(NotImplementedError, match="pi/2"):

@@ -55,14 +55,14 @@ class QbloxResonatorSpectroscopyFlux(ResonatorSpectroscopyFlux):
             # means a target with no flux wiring refuses here, not mid-schedule
             element = vendor_element(self, qubit_name, "flux")
             flux_port = element.ports.flux
-            # detuning is relative to the CURRENT readout_freq_hz (on q<n>_ro)
+            # detuning is relative to the CURRENT readout_freq_hz (readout channel)
             center = self.device.channel(qubit_name, "readout").readout_freq_hz
             # Park target only. The neutral knob refuses when uncalibrated (NaN),
             # which is right for the relative frame but not here: this probe never
             # measures FROM the idle bias, so a missing calibration must not block
             # a run that is otherwise perfectly well defined.
             try:
-                idle_flux = self.device.channel(qubit_name, "flux").idle_flux
+                idle_flux = self.device.flux_line(qubit_name).idle_flux
             except (ValueError, NotImplementedError, KeyError):
                 idle_flux = 0.0
             # ABSOLUTE frame: the swept values ARE the line voltage, so nothing is

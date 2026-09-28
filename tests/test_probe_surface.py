@@ -2,8 +2,9 @@
 
 The cutover re-homed every probe's device READ from one per-qubit view onto the
 CHANNEL ENTITY that owns the knob — ``self.device.channel(q, "readout")``
-(``q1_ro``), ``...channel(q, "drive")`` (``q1_xy``) — plus the roster-resolved raw
-element for the vendor-only bits (ports, the flux sweet spot). A stale field
+(``fl.q1``), ``...channel(q, "drive")`` (``xy1.q1``) — or, for the standing flux
+bias, onto the LINE that owns it (``self.device.flux_line(q)``: ``z1``), plus
+the roster-resolved raw element for the vendor-only bits (ports). A stale field
 spelling or a missing entity would otherwise surface only on hardware, so this
 walks the WHOLE registered Qblox catalog and exercises each probe once.
 
@@ -236,7 +237,8 @@ def test_flux_probe_refuses_a_target_with_no_flux_channel(tmp_path):
 
     # same chip, but q2's flux wire was never installed
     roster = parse_components(ROSTER_TOML.replace('[lines.z2]\nflux = ["q2"]\n', ""))
-    assert not roster.channels_of("q2") or "q2_z" not in roster.entities
+    assert "z2" not in roster.entities  # the replace really removed the wire
+    assert not [c.name for c in roster.channels_of("q2") if "flux" in c.kinds]
     backend = make_backend(tmp_path, roster)
     exp = make_experiment(
         QbloxResonatorSpectroscopyFlux, backend, roster,

@@ -210,6 +210,12 @@ def test_the_park_offset_is_converted_too(tmp_path):
     for level in parks:
         assert abs(level) <= 1.0
         assert abs(level * 2.5) <= 2.5
+    # ...and "it" is the flux LINE's standing bias (SCQO 4.0.0: z1.idle_flux, read
+    # through device.flux_line) — not the 0 V courtesy fallback, which the probe
+    # takes silently when the bias cannot be read, so only this pins the read
+    idle = experiment.device.flux_line("q1").idle_flux
+    assert idle != 0.0, "the fixture must park away from 0 V for this to mean anything"
+    assert parks == pytest.approx([idle / 2.5])
 
 
 def _walk(node, seen=None):

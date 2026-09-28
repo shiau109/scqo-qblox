@@ -35,7 +35,9 @@ scqo_qblox/
   backend/qblox_backend.py   # QbloxBackend (scqo.Backend) + QbloxDeviceModel + ONE view class
                              #   per CHANNEL KIND: QbloxDriveChannel / QbloxReadoutChannel /
                              #   QbloxFluxChannel (subclass scqo.device.make_view_base("drive"|
-                             #   "readout"|"flux")); all three resolve onto the SAME
+                             #   "readout"|"flux"); the flux one is knob-free since SCQO
+                             #   4.0.0) + QbloxFluxLine (make_line_view_base("flux"): the
+                             #   line's idle_flux); all resolve onto the SAME
                              #   qblox_scheduler DeviceElement (the channel's single target)
                              #   wraps qblox_scheduler.HardwareAgent + QuantumDevice
   backend/_distortion.py     # flux-distortion facts -> the 4-stage QCM exp-bank dict (pure)
@@ -111,10 +113,13 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
   field unknown until seeded).
 - The channel views read/write BOTH scheduler API generations (legacy QCoDeS
   callables and the pydantic-model plain attributes).
-- `QbloxDeviceModel.component()` takes a ROSTER ENTITY name (`q1_ro`, `q1_xy`,
-  `q1_z`) and resolves it through the roster (kind -> view class, single target ->
-  vendor element). Everything the vendor does not realize — modes, lines,
-  composites, pump/multi-target channels, a target with no element — is a KeyError.
+- `QbloxDeviceModel.component()` takes a ROSTER ENTITY name — a channel ADDRESS
+  (`feedline.q1`, `xy1.q1`, `z1.q1`) or a flux LINE (`z1`) — and resolves it through
+  the roster (kind -> view class, single target -> vendor element; a line -> the
+  element of the one flux channel it carries). Everything the vendor does not
+  realize — modes, composites, operations (no gate-macro surface), a line carrying
+  no flux, pump/multi-target channels, a BORROWED channel no element adopts, a
+  target with no element — is a KeyError.
   A view's `.name` is the ENTITY name; `_element.name` is the vendor element.
 - The agent's `hardware_configuration` dict is AUTHORITATIVE: every run recompiles from
   it and re-pushes attenuations, so a direct qcodes `.set()` is overwritten.
@@ -303,7 +308,8 @@ Everything else (parameters, fitting, writeback, simulation) is inherited from `
   sweet spot to **0.0**, exactly where the two frames coincide. The relative probe now shifts its
   loop DOMAIN by the anchor: writing `idle_flux + flux` at the use site instead reaches the
   compiler as a BinaryExpression and dies in `expand_awg_from_normalised_range`.
-- **`idle_flux` is a REALIZED knob** (`element.flux_params.sweet_spot`), not Unrealized. It reads
+- **`idle_flux` is a REALIZED knob** (`element.flux_params.sweet_spot`) on the flux LINE view
+  (`z1`, SCQO 4.0.0), not Unrealized. It reads
   through `flux_anchor_v`, the same call `estimate()` uses to record `old_idle_flux`, so the bias a
   probe emits from and the one the fit re-references cannot drift apart. NaN means uncalibrated and
   REFUSES; only the absolute probe's end-of-schedule park falls back to 0 V, because that park is a
@@ -460,4 +466,4 @@ don't over-narrow.
 | `test_preview.py` | `QbloxBackend.preview`: both compiled artifacts render offline, no `_sync_att_limits` call, pinned `--out` dir overwrites in place, the rendered-shot cap refuses lab-sized schedules by name |
 | `test_new_probe_contracts.py` | the two silent-wrong-data regressions the 2026-08 probe batch shipped with: benchmarking sweeps `amp_reference_field()`'s knob and refuses a pi/2 gate BY NAME, the x90 knobs stay Unrealized, broadband-qubit refuses a second target (its resonator sibling's broadcast is pinned as CORRECT), `chunk_timeout_s` counts the reset |
 | `test_experiment_registration.py` | every experiment module has its `__init__` import line (both directions) |
-| `test_scqo_glue.py` | the `scqo` CLI works in THIS venv + the qblox factory (slow — see above) |
+| `test_scqo_glue.py` | the `scqo` CLI works in THIS venv + the qblox factory (slow — see above); the per-kind drift pin over channel AND line fields; the entity surface: the flux LINE view, borrowed/operation/composite refusals by name, `snapshot()` shape, `line_ports()` |

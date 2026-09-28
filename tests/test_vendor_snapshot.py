@@ -56,7 +56,7 @@ def test_snapshot_shows_the_executed_config_not_the_disk_copy(tmp_path, roster):
     backend = make_backend(tmp_path, roster)
     qd = backend._hw_agent.quantum_device
     embedded_before = qd.hardware_config
-    backend.device.component("q1_ro").readout_power_dbm = -20.0  # solves att 18
+    backend.device.component("fl.q1").readout_power_dbm = -20.0  # solves att 18
 
     snap = backend.vendor_config_snapshot()
     hw = json.loads(snap["hw_config.json"])
@@ -87,8 +87,8 @@ def test_snapshot_equals_the_files_save_writes(tmp_path, roster):
     """The snapshot is the save() serialisation: after a save the texts parse equal
     to both files on disk (save() shares config_texts, so they cannot diverge)."""
     backend = make_backend(tmp_path, roster)
-    backend.device.component("q1_ro").readout_power_dbm = -20.0
-    backend.device.component("q1_xy").drive_power_dbm = -33.0
+    backend.device.component("fl.q1").readout_power_dbm = -20.0
+    backend.device.component("xy1.q1").drive_power_dbm = -33.0
     snap_before = backend.vendor_config_snapshot()
     backend.device.save()
     for name, text in snap_before.items():

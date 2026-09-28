@@ -123,7 +123,7 @@ def _run(tmp_path, roster, **params):
     exp.device.channel("q1", "drive").drive_power_dbm = -33.0
     drive_amp = float(exp.device.channel("q1", "drive").drive_amp)
     readout_s = float(exp.device.channel("q1", "readout").readout_duration_s)
-    element = backend.device.component("q1_ro")._element
+    element = backend.device.component("fl.q1")._element
     tof = element.measure.acq_delay
     tof_s = float(tof() if callable(tof) else tof)
     return _events(compile_probe(backend, exp)), tof_s, drive_amp, readout_s

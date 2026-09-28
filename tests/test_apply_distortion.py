@@ -2,12 +2,20 @@
 session — no scqo config and no cluster. Mirrors the QM sibling's suite
 (scqo-qm/tests/test_apply_distortion.py); the live ``build_session`` -> facts ->
 apply path is scqo-owned.
+
+Since SCQO 4.0.0 the taps are the flux LINE's facts (``z1.distortion_amp``: a
+wire has one impulse response, however many targets ride it), so the fake
+session carries the REAL fixture roster — the target -> line hop is the
+roster's, not a string rule restated here.
 """
 
 from types import SimpleNamespace
 
 import pytest
 
+from conftest import ROSTER_TOML
+
+from scqo.roster import parse_components
 from scqo_qblox.backend.apply_distortion import (
     BASEBAND_CLOCK,
     apply_distortion_from_state,
@@ -16,15 +24,21 @@ from scqo_qblox.backend.apply_distortion import (
 
 KEY = "q1:fl-cl0.baseband"
 
+#: the flux LINE of q1 in the fixture roster (its default flux channel z1.q1
+#: rides it) — the owner of the taps and of the view the port is read from
+LINE = "z1"
+
 
 def _session(facts=None, runs=None, corrections=None):
     """A fake scqo Session exposing exactly what the helpers read."""
-    roster = SimpleNamespace(
-        default_channel=lambda t, k: f"{t}_{'z' if k == 'flux' else k}")
+    roster = parse_components(ROSTER_TOML)
     element = SimpleNamespace(ports=SimpleNamespace(flux="q1:fl"))
     saves: list = []
+    # only the flux LINE is served: the port must come from the line's view, and
+    # asking for anything else (the channel z1.q1, the mode q1) is a KeyError
+    views = {LINE: SimpleNamespace(_element=element)}
     device = SimpleNamespace(
-        component=lambda name: SimpleNamespace(_element=element),
+        component=lambda name: views[name],
         save=lambda: saves.append(True),
         _hw_config_file="hw_config.json", _config_file="dut_config.json")
     opts = SimpleNamespace(distortion_corrections=corrections)
@@ -55,7 +69,7 @@ def _run(amps, taus, *, experiment="qubit_ramsey_cryoscope",
 
 
 def _facts(amps, taus):
-    return {("q1_z", "distortion_amp"): amps, ("q1_z", "distortion_tau_s"): taus}
+    return {(LINE, "distortion_amp"): amps, (LINE, "distortion_tau_s"): taus}
 
 
 def _stages(entry):
@@ -64,10 +78,11 @@ def _stages(entry):
              entry.exp3_coeffs) if s is not None]
 
 
-def test_reads_flux_channel_applies_and_saves():
+def test_reads_flux_line_applies_and_saves():
     sess = _session(_facts([0.05, -0.03], [100e-9, 3000e-9]))
     out = apply_distortion_from_state("q1", session=sess)
-    assert out["channel"] == "q1_z"           # fact-vs-mode bridge: q1 -> q1_z
+    assert out["line"] == LINE                # fact-vs-mode bridge: q1 -> z1.q1 -> z1
+    assert "channel" not in out               # the 3.x summary key is gone
     assert out["portclock"] == KEY            # flux plays on the identity clock
     entry = sess._opts.distortion_corrections[KEY]
     assert not isinstance(entry, list)        # ONE correction on a real output
@@ -84,10 +99,11 @@ def test_dry_run_and_save_false_write_no_files():
 
 
 def test_missing_facts_refuse_by_name():
-    with pytest.raises(SystemExit, match="no accepted distortion facts"):
+    # the refusal names the LINE the facts were looked up on
+    with pytest.raises(SystemExit, match=f"no accepted distortion facts on {LINE}"):
         apply_distortion_from_state("q1", session=_session())
     # one of the pair missing is the same refusal (paired arrays)
-    partial = {("q1_z", "distortion_amp"): [0.05]}
+    partial = {(LINE, "distortion_amp"): [0.05]}
     with pytest.raises(SystemExit, match="no accepted distortion facts"):
         apply_distortion_from_state("q1", session=_session(partial))
 
@@ -155,6 +171,8 @@ def test_clear_removes_the_entry():
     apply_distortion_from_state("q1", session=sess, save=False)
     out = clear_distortion("q1", session=sess, dry_run=True)
     assert out["removed"] == [(0.05, 100e-9), (-0.03, 3000e-9)]
+    assert out["line"] == LINE and "channel" not in out  # same summary key
+    assert out["portclock"] == KEY
     assert KEY in sess._opts.distortion_corrections  # dry-run kept it
     out = clear_distortion("q1", session=sess)
     assert KEY not in sess._opts.distortion_corrections

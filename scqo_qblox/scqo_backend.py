@@ -6,7 +6,8 @@ folder is DERIVED from the keys and injected by ``load_cooldowns``):
 ``setup["instrument_config"]`` is the folder holding the vendor config files
 under canonical names — ``dut_config.json`` + ``hw_config.json``. It also receives
 the device's ROSTER, the authority on which entities exist: the driver serves views
-BY ENTITY NAME (``q1_xy`` -> its drive view over the vendor's q1 element), so the
+BY ENTITY NAME (the channel ``xy1.q1`` -> its drive view over the vendor's q1
+element, the flux line ``z1`` -> the bias of the element it carries), so the
 roster is threaded into the backend and every name resolves through it. Vendor
 imports stay INSIDE the function so loading this module is cheap and vendor-free.
 (The virtual-twin ``qblox_sim`` mode was retired with v0.5.0; ``simulated`` — built

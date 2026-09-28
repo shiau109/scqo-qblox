@@ -25,7 +25,8 @@ def agent_decide(catalog: list[dict], device_state: dict,
 
     ``targets`` are ENTITY names of the kind the experiment measures (qubit-like
     modes here) — the device state is keyed by every entity that carries knobs,
-    channels included (``q0_ro``, ``q0_xy``), so it is context, not a target list.
+    channels and lines included (``fl.q0``, ``xy_q0.q0``), so it is context, not a
+    target list.
     """
     _ = catalog, device_state
     return "resonator_spectroscopy", {"targets": targets,

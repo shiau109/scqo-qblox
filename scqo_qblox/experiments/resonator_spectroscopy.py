@@ -27,7 +27,7 @@ class QbloxResonatorSpectroscopy(ResonatorSpectroscopy):
 
         schedule = Schedule("resonator_spectroscopy_multiplexed")
         for qubit_name in self.params.targets:
-            # the knob lives on the target's readout CHANNEL entity (q1_ro)
+            # the knob lives on the target's readout CHANNEL entity (feedline.q1)
             center = self.device.channel(qubit_name, "readout").readout_freq_hz
             sub = Schedule(f"res_spec_{qubit_name}")
             with sub.loop(arange(0, reps, 1, DType.NUMBER)):
