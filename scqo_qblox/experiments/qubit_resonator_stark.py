@@ -39,7 +39,7 @@ Drive power contract: the core ``run()`` already solved the drive chain for
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitResonatorStark
@@ -61,6 +61,14 @@ class QbloxQubitResonatorStark(QubitResonatorStark):
     at a time. Subclasses the CORE class, not ``QbloxQubitSpectroscopy``: that
     probe opts into active reset, and a subclass would inherit the opt-in
     silently."""
+
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_resonator_stark --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "the Stark tone is a square pulse on the readout port and clock; amp_prefactor "
+        "times readout_amp has to stay inside the output's full scale",
+        "targets are measured one after another",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule

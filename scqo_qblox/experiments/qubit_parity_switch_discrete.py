@@ -29,12 +29,14 @@ vendor operation durations.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitParitySwitchDiscrete
 from scqo.experiments._depletion import depletion_wait_ns
+from scqo.requirements import Requirement
 
+from scqo_qblox.experiments._requires import HALF_PI_AMPLITUDE
 from scqo_qblox.experiments._state import measure_kwargs
 from scqo_qblox.experiments.qubit_parity_switch_continuous import (
     _MAX_ACQ_BINS,
@@ -53,6 +55,18 @@ _PERIOD_TOO_SHORT = (
 class QbloxQubitParitySwitchDiscrete(QubitParitySwitchDiscrete):
     """Build a two-measurement-per-cycle parity-monitor Schedule for a Qblox
     cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitParitySwitchDiscrete.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_parity_switch_discrete --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "more than 1,500,000 cycles is refused: every cycle takes two acquisition bins",
+        "the pad that fills the cycle is on the 1 ns grid",
+        "targets are measured one after another, each at its own cycle period",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule

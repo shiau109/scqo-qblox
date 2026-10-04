@@ -27,12 +27,14 @@ driver picks.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitParitySwitchContinuous
 from scqo.experiments._depletion import depletion_wait_ns
+from scqo.requirements import Requirement
 
+from scqo_qblox.experiments._requires import HALF_PI_AMPLITUDE
 from scqo_qblox.experiments._state import measure_kwargs
 
 #: acquisition bins per sequencer (qblox_scheduler constants.MAX_NUMBER_OF_BINS).
@@ -63,6 +65,17 @@ def _op_durations(experiment, target: str) -> tuple[float, float]:
 @register
 class QbloxQubitParitySwitchContinuous(QubitParitySwitchContinuous):
     """Build a per-shot parity-monitor Schedule for a Qblox cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitParitySwitchContinuous.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_parity_switch_continuous --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "more than 3,000,000 shots is refused: every shot is its own acquisition bin",
+        "targets are measured one after another, each at its own shot period",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule
