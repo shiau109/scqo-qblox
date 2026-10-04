@@ -95,6 +95,12 @@ and outside `make_session`.
 3. `@register` the subclass and import the module in `scqo_qblox/experiments/__init__.py`
    (manual — `tests/test_experiment_registration.py` refuses a module missing its line —
    and keep `__all__` in step with it; `test_probe_surface.py` compares it to the catalog).
+4. What is true of THIS backend only is declared on the class, not written into scqo's
+   documents: `backend_notes` (short sentences; `scqo run <name> --help` shows them here) and,
+   where the probe consumes a knob the other backend does not, `requires` extended from the
+   core class's (`qubit_ramsey.py` is the worked example). The pulse ORDER is declared once,
+   in scqo's `sequence_diagram`; a probe that deviates from it says so in `backend_notes`
+   until it is aligned (SCQO `CLAUDE.md`, *Experiment documents*).
 Everything else (parameters, fitting, writeback, simulation) is inherited from `scqo`.
 
 ## Reference

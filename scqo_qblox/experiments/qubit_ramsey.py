@@ -22,6 +22,7 @@ from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitRamsey
+from scqo.requirements import Requirement
 
 from scqo_qblox.experiments._reset import add_reset
 from scqo_qblox.experiments._state import measure_kwargs
@@ -30,6 +31,22 @@ from scqo_qblox.experiments._state import measure_kwargs
 @register
 class QbloxQubitRamsey(QubitRamsey):
     """Build a multiplexed Ramsey Schedule for a Qblox cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitRamsey.requires,
+        Requirement("pi_amp", "both pi/2 pulses are Rxy(theta=90), played at half the pi amplitude"),
+    )
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_ramsey --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "plays X90 first where the declared sequence has y90, so the fringe starts a quarter "
+        "turn later; the fitted frequency and T2* do not depend on it (SCQO BACKLOG I19)",
+        "both pi/2 pulses are Rxy(theta=90) at half of pi_amp; pi_amp_x90 is not realized here",
+        "the virtual detuning is the phase of the second Rxy; the same phase passed to X90 "
+        "would be dropped by the compiler",
+        "with a non-zero drag_beta every distinct phase needs its own waveform: at an 80 ns "
+        "pi/2 pulse 101 points fit the sequencer's 16384 samples and 103 do not",
+    )
 
     #: readout is held at the calibrated point for the whole run and the Reset is
     #: a genuine state reset, so reset_method='active' is valid here (_reset.py).
