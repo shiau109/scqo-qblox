@@ -22,6 +22,11 @@ from scqo_qblox.experiments._state import measure_kwargs
 class QbloxQubitEcho(QubitEcho):
     """Build a multiplexed Hahn-echo Schedule for a Qblox cluster."""
 
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_echo --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+    )
+
     #: readout is held at the calibrated point for the whole run and the Reset is
     #: a genuine state reset, so reset_method='active' is valid here (_reset.py).
     supports_active_reset: ClassVar[bool] = True

@@ -20,7 +20,7 @@ parks ``drive_power_dbm`` (a recorded set -> revert) before this probe reads
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitSpectroscopyFluxPulse
@@ -35,6 +35,16 @@ from ._vendor import vendor_element
 @register
 class QbloxQubitSpectroscopyFluxPulse(QubitSpectroscopyFluxPulse):
     """Build a multiplexed pulsed flux-spectroscopy Schedule for a Qblox cluster."""
+
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_spectroscopy_flux_pulse --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "the drive is a continuous tone held for the thermal-reset wait, not a pulse after "
+        "it: the wait is the saturation time",
+        "the flux is a voltage offset held together with the drive and returned to the idle "
+        "flux 65 ns before the readout",
+        "flux_component is refused: only the target's own flux line can be swept",
+    )
 
     def probe(self) -> Any:
         if self.params.flux_component is not None:

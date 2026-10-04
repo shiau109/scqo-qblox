@@ -22,15 +22,17 @@ by name - the QM probe realizes both.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
 from scqo import register
 from scqo.experiments import QubitRamseyFluxPulse
 from scqo.experiments._capabilities import flux_anchor_v
+from scqo.requirements import Requirement
 
 from ._flux_limits import check_flux_pulse_relative, to_dac_fraction
+from ._requires import HALF_PI_AMPLITUDE
 from ._reset import add_reset
 from ._state import measure_kwargs
 from ._vendor import vendor_element
@@ -39,6 +41,20 @@ from ._vendor import vendor_element
 @register
 class QbloxQubitRamseyFluxPulse(QubitRamseyFluxPulse):
     """Build a multiplexed Ramsey-vs-flux-pulse Schedule for a Qblox cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitRamseyFluxPulse.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_ramsey_flux_pulse --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "the flux pulse is a voltage offset set for the idle and returned to the idle flux "
+        "afterwards, not a shaped pulse",
+        "the virtual detuning is the phase of the second Rxy; the same phase passed to X90 "
+        "would be dropped by the compiler",
+        "flux_component is refused: only the target's own flux line can be pulsed",
+    )
 
     def probe(self) -> Any:
         if self.params.flux_component is not None:

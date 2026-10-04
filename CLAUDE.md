@@ -98,7 +98,8 @@ and outside `make_session`.
 4. What is true of THIS backend only is declared on the class, not written into scqo's
    documents: `backend_notes` (short sentences; `scqo run <name> --help` shows them here) and,
    where the probe consumes a knob the other backend does not, `requires` extended from the
-   core class's (`qubit_ramsey.py` is the worked example). The pulse ORDER is declared once,
+   core class's (`qubit_ramsey.py` is the worked example; a requirement several probes share
+   lives in `experiments/_requires.py`). The pulse ORDER is declared once,
    in scqo's `sequence_diagram`; a probe that deviates from it says so in `backend_notes`
    until it is aligned (SCQO `CLAUDE.md`, *Experiment documents*).
 Everything else (parameters, fitting, writeback, simulation) is inherited from `scqo`.

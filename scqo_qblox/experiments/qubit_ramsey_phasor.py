@@ -31,13 +31,15 @@ proportionality, and no sign to get wrong.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 from scqo import register
 from scqo.experiments import QubitRamseyPhasor
 from scqo.experiments.qubit_ramsey_phasor import FRAME_AXIS, IDLE_AXIS
+from scqo.requirements import Requirement
 
+from scqo_qblox.experiments._requires import HALF_PI_AMPLITUDE
 from scqo_qblox.experiments._reset import add_reset
 from scqo_qblox.experiments._state import measure_kwargs
 
@@ -67,6 +69,16 @@ def validate_inputs(idle_ns: np.ndarray) -> None:
 @register
 class QbloxQubitRamseyPhasor(QubitRamseyPhasor):
     """Build a multiplexed phasor-Ramsey Schedule for a Qblox cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitRamseyPhasor.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_ramsey_phasor --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "the frame axis is a shift of the drive clock's phase before the second pulse; the "
+        "phase is reset at the start of every point",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule

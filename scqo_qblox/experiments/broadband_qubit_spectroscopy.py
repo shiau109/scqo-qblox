@@ -22,6 +22,14 @@ from ._vendor import vendor_element
 class QbloxBroadbandQubitSpectroscopy(BroadbandQubitSpectroscopy):
     """Build and execute wideband two-tone qubit spectroscopy across stepped drive LOs on Qblox."""
 
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run broadband_qubit_spectroscopy --help`
+    backend_notes = (
+        "one target per run: the probe steps one drive clock's local oscillator, and a "
+        "second target is refused by name",
+        "--preview is refused: the probe acquires band by band itself",
+    )
+
     # preview opt-out (backend.SELF_ACQUIRING_ATTR): truthy reason = refuse
     probe_self_acquires = "broadband qubit spectroscopy steps drive LO frequencies across sub-bands"
 
