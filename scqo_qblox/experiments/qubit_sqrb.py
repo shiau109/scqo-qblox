@@ -94,6 +94,15 @@ def find_recovery_gate(u_total: np.ndarray) -> int:
 class QbloxQubitSQRB(QubitSQRB):
     """Build a multiplexed Single Qubit Randomized Benchmarking Schedule for Qblox."""
 
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_sqrb --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "the random sequences are drawn on the host and compiled into the schedule; with "
+        "seed unset the generator is seeded with 42",
+        "the identity Clifford plays nothing, so a Clifford averages 44 / 24 = 1.83 "
+        "pulses here, while the analysis divides the error per Clifford by 1.875",
+        "the pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+    )
+
     def probe(self) -> Any:
         from qblox_scheduler import Schedule
         from qblox_scheduler.operations import IdlePulse, Measure, Rxy

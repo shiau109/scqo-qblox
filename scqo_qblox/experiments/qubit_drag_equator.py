@@ -5,14 +5,16 @@ Parameters, fit, and reporting are inherited from ``scqo.experiments.QubitDragEq
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 import numpy as np
 import xarray as xr
 
 from scqo import register
 from scqo.experiments import QubitDragEquator
+from scqo.requirements import Requirement
 
 from ._broadband import read_field, write_field
+from ._requires import HALF_PI_AMPLITUDE
 from ._reset import add_reset
 from ._state import measure_kwargs
 
@@ -20,6 +22,19 @@ from ._state import measure_kwargs
 @register
 class QbloxQubitDragEquator(QubitDragEquator):
     """Build and execute the DRAG equator calibration across swept beta on Qblox."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitDragEquator.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_drag_equator --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "each coefficient is realized by writing drag_beta on the device, one program per "
+        "point, and the stored value is put back afterwards; --preview is refused",
+        "one DRAG coefficient serves every rotation here: target_gate=x90 plays the doubled "
+        "pi/2 sequence but still sweeps drag_beta, and its proposal drag_beta_x90 is not "
+        "realized on this backend",
+        "the pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+    )
 
     probe_self_acquires = (
         "it sweeps DRAG beta by stepping element.rxy.beta and acquiring across schedules"

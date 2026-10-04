@@ -71,6 +71,15 @@ def _refuse_uneven_amps(amp_factors, name: str) -> None:
 class QbloxQubitDeterministicBenchmarking(QubitDeterministicBenchmarking):
     """Build a multiplexed Deterministic Benchmarking Schedule for a Qblox cluster."""
 
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_deterministic_benchmarking --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "pi/2 target gates are refused: X90 is derived from the pi amplitude here, so "
+        "there is no pi_amp_x90 to sweep or to write",
+        "an explicit amp_prefactors list has to be evenly spaced; an uneven one is "
+        "refused by name",
+    )
+
     def _amp_field(self) -> str:
         """The knob this run benchmarks, refusing the ones Qblox cannot offer.
 

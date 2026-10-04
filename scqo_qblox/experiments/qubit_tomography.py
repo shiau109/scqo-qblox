@@ -9,7 +9,7 @@ Parameters, fit, and reporting are inherited from ``scqo.experiments.QubitTomogr
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 import numpy as np
 import xarray as xr
 
@@ -90,6 +90,15 @@ def _play_basis_rotation(sub: Any, q_name: str, basis_str: str) -> None:
 @register
 class QbloxQubitTomography(QubitTomography):
     """Build and execute state tomography with GMM training and multi-basis readout on Qblox."""
+
+    #: true of THIS probe only; scqo shows them in `scqo run qubit_tomography --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "the amp and detuning entries of qubit_configs are not realized: every gate is "
+        "played as calibrated",
+        "the pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "--preview is refused: the probe acquires the training and the tomography shots "
+        "itself",
+    )
 
     probe_self_acquires = (
         "it acquires GMM training shots and state tomography shots across schedules"
