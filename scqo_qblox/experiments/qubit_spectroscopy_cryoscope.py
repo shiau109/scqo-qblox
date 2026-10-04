@@ -42,7 +42,7 @@ validated on this backend's hardware.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -122,6 +122,19 @@ def check_drive_amp(target: str, pi_amp: float, amp_sq: float,
 @register
 class QbloxQubitSpectroscopyCryoscope(QubitSpectroscopyCryoscope):
     """Build the long-time spectroscopy-cryoscope Schedule for a Qblox cluster."""
+
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_spectroscopy_cryoscope --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "drive_shape cosine and gaussian are refused: only the square pulse is realized, "
+        "and drive_sigma_frac is not used",
+        "the area of the x180 is that of the DRAG gaussian this backend plays for "
+        "pi_amp and pi_duration_s",
+        "a pulse whose amplitude would pass the full scale of the output is refused; "
+        "lengthen drive_len_ns or lower drive_amp_factor",
+        "the flux pulse is a voltage offset held from the start of the wait to 100 ns "
+        "after the drive pulse, not a shaped pulse",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule

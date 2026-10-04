@@ -46,14 +46,16 @@ name; the microsecond tails belong to qubit_spectroscopy_cryoscope anyway.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from scqo import register
 from scqo.experiments import QubitRamseyCryoscope
 from scqo.experiments._capabilities import flux_anchor_v
 from scqo.experiments.qubit_ramsey_cryoscope import DURATION_AXIS, FRAME_AXIS
+from scqo.requirements import Requirement
 
 from ._flux_limits import check_flux_pulse_relative, to_dac_fraction
+from ._requires import HALF_PI_AMPLITUDE
 from ._reset import add_reset
 from ._state import measure_kwargs
 from ._vendor import vendor_element
@@ -95,6 +97,22 @@ def validate_inputs(targets: list, durations, max_duration_ns: int) -> None:
 @register
 class QbloxQubitRamseyCryoscope(QubitRamseyCryoscope):
     """Build the Ramsey-cryoscope Schedule for a Qblox cluster."""
+
+    #: what only this backend consumes, on top of the neutral requirements
+    requires: ClassVar[tuple[Requirement, ...]] = (
+        *QubitRamseyCryoscope.requires, HALF_PI_AMPLITUDE)
+    #: true of THIS probe only; scqo shows them in
+    #: `scqo run qubit_ramsey_cryoscope --help`
+    backend_notes: ClassVar[tuple[str, ...]] = (
+        "both pi/2 pulses are played at half of pi_amp; pi_amp_x90 is not realized here",
+        "max_duration_ns above 512 is refused: the sequence is written out once per "
+        "nanosecond of the duration axis and the readout module's instruction memory "
+        "fills first",
+        "each flux pulse is a voltage offset held in steps of 4 ns, followed by a 1 to 3 "
+        "ns pulse for the remainder",
+        "the flux pulse starts as the first x90 ends, and the second x90 starts "
+        "max_duration_ns + 8 ns after it",
+    )
 
     def probe(self) -> Any:
         from qblox_scheduler import Schedule
