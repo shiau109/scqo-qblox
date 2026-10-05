@@ -190,6 +190,25 @@ def test_denied_probes_carry_the_field_but_not_the_optin():
         assert not getattr(cls, "supports_active_reset", False), name
 
 
+def test_the_requirement_listing_follows_the_opt_in():
+    """`scqo run <name> --help` lists what a reset needs from scqo's declared
+    requirements, and the shared Parameters accept `reset_method="active"` on
+    every backend. `experiments/__init__.py` tells scqo that active reset is
+    opt-in here, so a probe that refuses it does not list the discriminator and
+    the settle it would never read, while a carrier still does."""
+    import scqo_qblox.experiments  # noqa: F401
+    from scqo.experiments import get
+
+    def conditions(name):
+        return {req.condition() for req in get(name).requirements()}
+
+    listing = [name for name in DENIED if "reset_method=active" in conditions(name)]
+    assert not listing, f"thermal-only probes still list active-reset needs: {listing}"
+    assert "reset_method=thermal" in conditions("readout_power")
+    for name in ("qubit_relaxation", "qubit_ramsey"):
+        assert "reset_method=active" in conditions(name), name
+
+
 # --------------------------------------------------------------- it compiles
 
 @pytest.mark.parametrize("name", CARRIERS)

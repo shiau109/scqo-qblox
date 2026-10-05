@@ -32,6 +32,16 @@ from . import resonator_spectroscopy_power_chain  # noqa: F401  (import side eff
 from . import resonator_spectroscopy_power_amp  # noqa: F401  (import side effect: @register)
 from . import single_shot_readout  # noqa: F401  (import side effect: @register)
 
+# Active reset is opt-in per probe here (_reset.py, default DENY). scqo lists what a
+# reset needs from the shared Parameters, which accept reset_method="active" on every
+# backend; this tells it where the opt-in is declared, so `scqo run <name> --help`
+# leaves those lines out for a probe that refuses the setting.
+from scqo.requirements import declare_probe_opt_in as _declare_probe_opt_in
+
+from ._reset import ACTIVE_RESET_ATTR as _ACTIVE_RESET_ATTR
+
+_declare_probe_opt_in("scqo_qblox", "reset_method", "active", _ACTIVE_RESET_ATTR)
+
 __all__ = [
     "broadband_qubit_spectroscopy",
     "broadband_resonator_spectroscopy",
